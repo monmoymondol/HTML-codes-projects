@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudentGear — Budget Electronics for Students</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --card: #1a1a25;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --text: #f0f0f5;
+    --muted: #6b6b80;
+    --border: #2a2a3a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* NOISE TEXTURE */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 4rem;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+
+  .logo span { color: var(--accent2); }
+
+  nav ul {
+    display: flex;
+    list-style: none;
+    gap: 2.5rem;
+  }
+
+  nav ul a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  nav ul a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--accent);
+    color: var(--bg) !important;
+    padding: 0.5rem 1.2rem;
+    border-radius: 2px;
+  }
+
+  .nav-cta:hover { background: #00b8cc !important; color: var(--bg) !important; }
+
+  /* HERO */
+  .hero {
+    min-height: 92vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 4rem;
+    position: relative;
+    gap: 4rem;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.4rem 1rem;
+    border-radius: 2px;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .hero-badge::before {
+    content: '●';
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-size: clamp(3rem, 6vw, 5.5rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -3px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  h1 .highlight {
+    color: var(--accent);
+    display: block;
+  }
+
+  h1 .highlight2 {
+    color: var(--accent2);
+  }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 1.1rem;
+    line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 1rem;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 0.9rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .btn-primary:hover {
+    background: #fff;
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.9rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: all 0.2s;
+    display: inline-block;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 3rem;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  .stat {
+    border-left: 2px solid var(--accent2);
+    padding-left: 1rem;
+  }
+
+  .stat-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* HERO VISUAL */
+  .hero-visual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .product-card-mini {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1.5rem;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-card-mini:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+  }
+
+  .product-card-mini:nth-child(2) { margin-top: 2rem; }
+  .product-card-mini:nth-child(4) { margin-top: -2rem; }
+
+  .product-card-mini::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .product-card-mini:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .card-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  .card-price {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .card-og {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  /* SECTION */
+  section {
+    padding: 5rem 4rem;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 0.8rem;
+  }
+
+  .section-title {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: -2px;
+    margin-bottom: 1rem;
+  }
+
+  .section-sub {
+    color: var(--muted);
+    max-width: 500px;
+    line-height: 1.6;
+    margin-bottom: 3rem;
+  }
+
+  /* PRODUCTS GRID */
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .product-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .product-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0,229,255,0.1);
+  }
+
+  .product-img {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 60%, rgba(0,229,255,0.05));
+  }
+
+  .badge {
+    position: absolute;
+    top: 0.8rem;
+    left: 0.8rem;
+    background: var(--accent2);
+    color: white;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .badge.new { background: var(--accent); color: var(--bg); }
+
+  .product-body {
+    padding: 1.2rem;
+  }
+
+  .product-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+
+  .product-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .product-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .price-wrap {}
+  .price { font-family: 'Space Mono', monospace; font-size: 1.1rem; color: var(--accent); font-weight: 700; }
+  .og-price { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); text-decoration: line-through; }
+
+  .add-btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .add-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* CATEGORIES */
+  .categories {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .cat-item {
+    background: var(--surface);
+    padding: 2.5rem 2rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+  }
+
+  .cat-item:hover { background: var(--card); }
+
+  .cat-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .cat-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.3rem; }
+  .cat-count { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); }
+
+  /* DEAL BANNER */
+  .deal-banner {
+    background: linear-gradient(135deg, #0d1f2d, #0a1628);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 4px;
+    padding: 3rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2rem;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 3rem;
+  }
+
+  .deal-banner::before {
+    content: 'STUDENT DEAL';
+    position: absolute;
+    right: -2rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: rgba(0,229,255,0.2);
+    letter-spacing: 0.3em;
+  }
+
+  .deal-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+  }
+
+  .deal-title {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 0.5rem;
+  }
+
+  .deal-sub { color: var(--muted); font-size: 0.9rem; }
+
+  .countdown {
+    display: flex;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .count-unit {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1rem 1.2rem;
+    border-radius: 2px;
+  }
+
+  .count-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+    line-height: 1;
+  }
+
+  .count-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* WHY US */
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+
+  .why-item {
+    padding: 2rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: border-color 0.3s;
+  }
+
+  .why-item:hover { border-color: var(--accent); }
+
+  .why-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .why-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .why-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+  /* NEWSLETTER */
+  .newsletter {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .newsletter-inner {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  .newsletter-form {
+    display: flex;
+    gap: 0;
+    margin-top: 2rem;
+  }
+
+  .newsletter-form input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-right: none;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.9rem 1.2rem;
+    border-radius: 2px 0 0 2px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .newsletter-form input:focus { border-color: var(--accent); }
+  .newsletter-form input::placeholder { color: var(--muted); }
+
+  .newsletter-form button {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 0.9rem 1.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 0 2px 2px 0;
+    transition: background 0.2s;
+  }
+
+  .newsletter-form button:hover { background: #fff; }
+
+  /* FOOTER */
+  footer {
+    padding: 3rem 4rem;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+  }
+
+  .footer-brand p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; margin-top: 1rem; }
+
+  .footer-col h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .footer-col a {
+    display: block;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    transition: color 0.2s;
+  }
+
+  .footer-col a:hover { color: var(--accent); }
+
+  .footer-bottom {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 4rem;
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CART TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 1rem 1.5rem;
+    border-radius: 2px;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 1000;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 1rem 1.5rem; }
+    nav ul { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 2rem 1.5rem; min-height: auto; }
+    .hero-visual { display: none; }
+    section { padding: 3rem 1.5rem; }
+    .cat-grid { grid-template-columns: repeat(2, 1fr); }
+    .why-grid { grid-template-columns: 1fr; }
+    footer { grid-template-columns: 1fr; padding: 2rem 1.5rem; gap: 2rem; }
+    .footer-bottom { padding: 1rem 1.5rem; flex-direction: column; gap: 0.5rem; }
+    .deal-banner { grid-template-columns: 1fr; }
+    .hero-stats { flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Student<span>Gear</span></div>
+  <ul>
+    <li><a href="#products">Products</a></li>
+    <li><a href="#categories">Categories</a></li>
+    <li><a href="#deals">Deals</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact" class="nav-cta">Shop Now</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">🎓 Made for Students</div>
+    <h1>
+      Tech Gear
+      <span class="highlight">That Won't</span>
+      Break <span class="highlight2">Budget</span>
+    </h1>
+    <p class="hero-sub">Premium electronics and accessories for students — at prices that make sense. Laptop stands, chargers, audio gear, and more.</p>
+    <div class="hero-btns">
+      <a href="#products" class="btn-primary">Browse Products</a>
+      <a href="#deals" class="btn-ghost">See Deals</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">500+</div>
+        <div class="stat-label">Products</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">12k+</div>
+        <div class="stat-label">Students</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">4.9★</div>
+        <div class="stat-label">Rating</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="product-card-mini">
+      <div class="card-icon">🎧</div>
+      <div class="card-name">Study Headphones</div>
+      <div class="card-price">৳ 1,200</div>
+      <div class="card-og">৳ 2,000</div>
+    </div>
+    <div class="product-card-mini">
+      <div class="card-icon">💻</div>
+      <div class="card-name">Laptop Stand</div>
+      <div class="card-price">৳ 850</div>
+      <div class="card-og">৳ 1,400</div>
+    </div>
+    <div class="product-card-mini">
+      <div class="card-icon">🔋</div>
+      <div class="card-name">Power Bank 10K</div>
+      <div class="card-price">৳ 950</div>
+      <div class="card-og">৳ 1,600</div>
+    </div>
+    <div class="product-card-mini">
+      <div class="card-icon">🖱️</div>
+      <div class="card-name">Wireless Mouse</div>
+      <div class="card-price">৳ 600</div>
+      <div class="card-og">৳ 900</div>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="categories" id="categories">
+  <div class="cat-grid">
+    <div class="cat-item">
+      <div class="cat-icon">💻</div>
+      <div class="cat-name">Laptop Accessories</div>
+      <div class="cat-count">48 products</div>
+    </div>
+    <div class="cat-item">
+      <div class="cat-icon">🎧</div>
+      <div class="cat-name">Audio</div>
+      <div class="cat-count">35 products</div>
+    </div>
+    <div class="cat-item">
+      <div class="cat-icon">📱</div>
+      <div class="cat-name">Phone Accessories</div>
+      <div class="cat-count">62 products</div>
+    </div>
+    <div class="cat-item">
+      <div class="cat-icon">🔌</div>
+      <div class="cat-name">Power & Charging</div>
+      <div class="cat-count">27 products</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section id="products">
+  <div class="section-label">// Featured Products</div>
+  <h2 class="section-title">Student Essentials</h2>
+  <p class="section-sub">Everything you need for class, the library, or late-night study sessions.</p>
+
+  <div class="products-grid">
+    <div class="product-card">
+      <div class="product-img">🎧<div class="badge">HOT</div></div>
+      <div class="product-body">
+        <div class="product-name">Noise-Cancelling Study Headphones</div>
+        <div class="product-desc">Deep bass, crystal clear audio for calls & music. 20hr battery life.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 1,200</div>
+            <div class="og-price">৳ 2,000</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Headphones')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">💻<div class="badge new">NEW</div></div>
+      <div class="product-body">
+        <div class="product-name">Adjustable Laptop Stand</div>
+        <div class="product-desc">Ergonomic aluminum stand. Foldable & portable. Fits 11"–17" laptops.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 850</div>
+            <div class="og-price">৳ 1,400</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Laptop Stand')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">🔋</div>
+      <div class="product-body">
+        <div class="product-name">10,000mAh Power Bank</div>
+        <div class="product-desc">Dual USB ports. Fast charge compatible. Slim pocket-sized design.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 950</div>
+            <div class="og-price">৳ 1,600</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Power Bank')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">🖱️<div class="badge">HOT</div></div>
+      <div class="product-body">
+        <div class="product-name">Silent Wireless Mouse</div>
+        <div class="product-desc">2.4GHz wireless, no sound clicks. DPI adjustable. 12 month battery.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 600</div>
+            <div class="og-price">৳ 900</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Wireless Mouse')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">⌨️</div>
+      <div class="product-body">
+        <div class="product-name">Compact Bluetooth Keyboard</div>
+        <div class="product-desc">Multi-device pairing. Rechargeable. Great for tablets & remote work.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 1,100</div>
+            <div class="og-price">৳ 1,800</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('BT Keyboard')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">💡<div class="badge new">NEW</div></div>
+      <div class="product-body">
+        <div class="product-name">LED Desk Lamp with USB Port</div>
+        <div class="product-desc">Eye-care mode, 3 color temps, brightness control. Built-in USB charger.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 750</div>
+            <div class="og-price">৳ 1,200</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Desk Lamp')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">🔌</div>
+      <div class="product-body">
+        <div class="product-name">5-Port USB Hub</div>
+        <div class="product-desc">USB 3.0 high-speed. Plug & play. Perfect for laptops with few ports.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 480</div>
+            <div class="og-price">৳ 750</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('USB Hub')">Add +</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="product-card">
+      <div class="product-img">📷</div>
+      <div class="product-body">
+        <div class="product-name">1080p Webcam</div>
+        <div class="product-desc">HD video for online classes and meetings. Built-in noise-cancelling mic.</div>
+        <div class="product-footer">
+          <div class="price-wrap">
+            <div class="price">৳ 1,350</div>
+            <div class="og-price">৳ 2,200</div>
+          </div>
+          <button class="add-btn" onclick="addToCart('Webcam')">Add +</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEALS -->
+<section id="deals">
+  <div class="deal-banner">
+    <div>
+      <div class="deal-tag">⚡ Flash Deal — Student Exclusive</div>
+      <div class="deal-title">Up to 40% Off<br>This Week Only</div>
+      <p class="deal-sub">Show your student ID at checkout and get an extra 5% off any order.</p>
+    </div>
+    <div class="countdown" id="countdown">
+      <div class="count-unit"><span class="count-num" id="hours">11</span><span class="count-label">Hours</span></div>
+      <div class="count-unit"><span class="count-num" id="mins">45</span><span class="count-label">Mins</span></div>
+      <div class="count-unit"><span class="count-num" id="secs">00</span><span class="count-label">Secs</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY US -->
+<section id="about" style="background: var(--surface); border-top: 1px solid var(--border);">
+  <div class="section-label">// Why StudentGear</div>
+  <h2 class="section-title">Built for Campus Life</h2>
+  <p class="section-sub">We know what students actually need — and what they can actually afford.</p>
+
+  <div class="why-grid">
+    <div class="why-item">
+      <span class="why-icon">💸</span>
+      <div class="why-title">Student Pricing</div>
+      <div class="why-desc">Every product is priced specifically for student budgets. No markup nonsense.</div>
+    </div>
+    <div class="why-item">
+      <span class="why-icon">🚀</span>
+      <div class="why-title">Fast Delivery</div>
+      <div class="why-desc">Get your gear before your next assignment deadline. Same-day delivery in Dhaka.</div>
+    </div>
+    <div class="why-item">
+      <span class="why-icon">🛡️</span>
+      <div class="why-title">Quality Guaranteed</div>
+      <div class="why-desc">Every product is tested and comes with a 6-month warranty. No questions asked returns.</div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="newsletter">
+  <div class="newsletter-inner">
+    <div class="section-label">// Stay in the loop</div>
+    <h2 class="section-title" style="font-size: 2rem;">Get Student Deals First</h2>
+    <p class="section-sub" style="margin: 0 auto;">Flash sales, new arrivals, and exclusive student discounts — straight to your inbox.</p>
+    <div class="newsletter-form">
+      <input type="email" placeholder="your@email.com" id="emailInput" />
+      <button onclick="subscribe()">Subscribe</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="footer-brand">
+    <div class="logo">Student<span>Gear</span></div>
+    <p>Budget-friendly electronics for students across Bangladesh. Making campus life a little easier, one gadget at a time.</p>
+  </div>
+  <div class="footer-col">
+    <h4>Shop</h4>
+    <a href="#">All Products</a>
+    <a href="#">Deals</a>
+    <a href="#">New Arrivals</a>
+    <a href="#">Best Sellers</a>
+  </div>
+  <div class="footer-col">
+    <h4>Support</h4>
+    <a href="#">FAQ</a>
+    <a href="#">Shipping Info</a>
+    <a href="#">Returns</a>
+    <a href="#">Warranty</a>
+  </div>
+  <div class="footer-col">
+    <h4>Contact</h4>
+    <a href="#">WhatsApp</a>
+    <a href="#">Email Us</a>
+    <a href="#">Facebook</a>
+    <a href="#">Instagram</a>
+  </div>
+</footer>
+
+<div class="footer-bottom">
+  <span>© 2025 StudentGear. All rights reserved.</span>
+  <span>Made with ❤️ for students in Bangladesh</span>
+</div>
+
+<!-- CART TOAST -->
+<div class="toast" id="toast">✓ Added to cart!</div>
+
+<script>
+  // Countdown Timer
+  function updateCountdown() {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 0);
+    const diff = end - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById('hours').textContent = String(h).padStart(2,'0');
+    document.getElementById('mins').textContent = String(m).padStart(2,'0');
+    document.getElementById('secs').textContent = String(s).padStart(2,'0');
+  }
+  updateCountdown();
+  setInterval(updateCountdown, 1000);
+
+  // Add to Cart
+  function addToCart(name) {
+    const toast = document.getElementById('toast');
+    toast.textContent = `✓ ${name} added to cart!`;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // Subscribe
+  function subscribe() {
+    const input = document.getElementById('emailInput');
+    if (input.value.includes('@')) {
+      const toast = document.getElementById('toast');
+      toast.textContent = '✓ You\'re subscribed!';
+      toast.classList.add('show');
+      input.value = '';
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+  }
+
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.animation = 'fadeUp 0.5s ease forwards';
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.product-card, .why-item, .cat-item').forEach(el => {
+    el.style.opacity = '0';
+    observer.observe(el);
+  });
+</script>
+</body>
+</html>
