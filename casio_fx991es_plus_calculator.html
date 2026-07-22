@@ -1,0 +1,300 @@
+
+<h2 class="sr-only">Casio FX-991ES PLUS scientific calculator — interactive simulation</h2>
+<style>
+*{box-sizing:border-box}
+#co{display:flex;justify-content:center;padding:20px 0 36px}
+#ca{width:298px;background:#18283e;border-radius:16px 16px 26px 26px;padding:12px 10px 22px;font-family:Arial,sans-serif}
+.brand{color:#f4f7fa;font-size:21px;font-weight:800;letter-spacing:5px;text-align:right;margin-bottom:0}
+.model{color:#4e6277;font-size:7.5px;letter-spacing:1.5px;text-align:right;margin-bottom:8px}
+.solar{height:10px;background:#090e18;border-radius:2px;margin-bottom:8px;display:flex;gap:2px;padding:2px 4px}
+.sc{flex:1;background:#06090f;border-radius:1px;border:0.5px solid #10182a}
+.dw{background:#c9d39e;border-radius:4px;padding:5px 9px 6px;margin-bottom:10px;border:1.5px solid #9daa6a}
+.dst{display:flex;gap:9px;margin-bottom:2px}
+.di{font-size:8px;color:#1e2c0e;font-family:monospace;font-weight:700;opacity:.18;line-height:1;transition:opacity .1s}
+.di.on{opacity:1}
+.de{font-family:'Courier New',monospace;font-size:13px;color:#18200c;text-align:right;min-height:22px;word-break:break-all;line-height:1.4;overflow-x:hidden}
+.dr{font-family:'Courier New',monospace;font-size:23px;color:#18200c;text-align:right;min-height:30px;font-weight:600;letter-spacing:.5px}
+.cur{display:inline-block;width:1.5px;height:14px;background:#18200c;vertical-align:middle;margin-left:1px;animation:bl 1s step-end infinite}
+@keyframes bl{50%{opacity:0}}
+.brow{display:grid;gap:3px;margin-bottom:3px}
+.r6{grid-template-columns:repeat(6,1fr)}
+.r5{grid-template-columns:repeat(5,1fr)}
+.btn{position:relative;background:#243450;border:none;border-radius:3px;color:#c8d2de;cursor:pointer;padding:5px 1px 4px;text-align:center;min-height:30px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;font-size:10px;line-height:1.1;user-select:none;-webkit-tap-highlight-color:transparent}
+.btn:active{background:#36507a}
+.sh{font-size:6px;color:#f5a020;position:absolute;top:2px;left:50%;transform:translateX(-50%);white-space:nowrap;pointer-events:none}
+.al{font-size:6px;color:#c060e0;position:absolute;top:10px;left:50%;transform:translateX(-50%);white-space:nowrap;pointer-events:none}
+.nav{min-height:21px;background:#192d48;font-size:8.5px}
+.nav:active{background:#253d5e}
+.num{background:#1d2c43;font-size:13px;font-weight:600;min-height:32px}
+.num:active{background:#28405c}
+.op{background:#203050;font-size:12px;min-height:32px}
+.op:active{background:#2d4368}
+.del{color:#ff8a6a}.ac{color:#ff6848}
+.eq{background:#14336e;color:#e0eaff;font-size:15px;font-weight:700;min-height:32px}
+.eq:active{background:#1c4c9c}
+.sk{color:#f5a020;font-weight:700}.ak{color:#c060e0}
+#ca.son .sk{background:#f5a020;color:#18283e}
+#ca.aon .ak{background:#8010b8;color:#f0e0ff}
+sup{font-size:8px;vertical-align:super;line-height:0}
+.hint{font-size:8px;color:#5a7a9a;text-align:center;margin-top:6px;letter-spacing:.5px}
+</style>
+<div id="co"><div id="ca">
+  <div class="brand">CASIO</div>
+  <div class="model">NATURAL-V.P.A.M. · fx-991ES PLUS</div>
+  <div class="solar">
+    <div class="sc"></div><div class="sc"></div><div class="sc"></div>
+    <div class="sc"></div><div class="sc"></div><div class="sc"></div>
+    <div class="sc"></div><div class="sc"></div><div class="sc"></div>
+  </div>
+  <div class="dw">
+    <div class="dst">
+      <span class="di" id="ss">S</span>
+      <span class="di" id="sa">A</span>
+      <span class="di on" id="sd" style="cursor:pointer" title="Click to switch to RAD" onclick="toggleDeg()">D</span>
+      <span class="di" id="sr" style="cursor:pointer" title="Click to switch to DEG" onclick="toggleDeg()">R</span>
+      <span class="di" id="sm">M</span>
+      <span class="di" id="sg">G</span>
+    </div>
+    <div class="de" id="de"><span class="cur"></span></div>
+    <div class="dr" id="dr"></div>
+  </div>
+  <!-- Nav row -->
+  <div class="brow r6">
+    <button class="btn nav sk" onclick="p('SHIFT')">SHIFT</button>
+    <button class="btn nav ak" onclick="p('ALPHA')">ALPHA</button>
+    <button class="btn nav" onclick="p('LEFT')">◁</button>
+    <button class="btn nav" onclick="p('UP')">△</button>
+    <button class="btn nav" onclick="p('MODE')"><span class="sh">SETUP</span>MODE</button>
+    <button class="btn nav" onclick="p('RIGHT')">▷</button>
+  </div>
+  <!-- Calc row -->
+  <div class="brow r6">
+    <button class="btn" onclick="p('CALC')"><span class="sh">SOLVE</span>CALC</button>
+    <button class="btn" onclick="p('INTG')"><span class="sh">∫f·dx</span>∫dx</button>
+    <button class="btn" onclick="p('DERV')"><span class="sh">d²/dx²</span>d/dx</button>
+    <button class="btn" onclick="p('SUMM')"><span class="sh">Π</span>Σ</button>
+    <button class="btn" onclick="p('POL')"><span class="sh">→r∠θ</span>Pol(</button>
+    <button class="btn" onclick="p('REC')"><span class="sh">→a+bi</span>Rec(</button>
+  </div>
+  <!-- Inv/power/log row -->
+  <div class="brow r6">
+    <button class="btn" onclick="p('INV')"><span class="sh">x!</span>x⁻¹</button>
+    <button class="btn" onclick="p('SQ')"><span class="sh">√</span>x²</button>
+    <button class="btn" onclick="p('PWR')"><span class="sh">ʸ√x</span>x^y</button>
+    <button class="btn" onclick="p('LOG')"><span class="sh">10^x</span>log</button>
+    <button class="btn" onclick="p('LN')"><span class="sh">e^x</span>ln</button>
+    <button class="btn" onclick="p('NEG')"><span class="sh">Abs</span>(-)</button>
+  </div>
+  <!-- Trig row -->
+  <div class="brow r6">
+    <button class="btn" onclick="p('SIN')"><span class="sh">sin⁻¹</span>sin</button>
+    <button class="btn" onclick="p('COS')"><span class="sh">cos⁻¹</span>cos</button>
+    <button class="btn" onclick="p('TAN')"><span class="sh">tan⁻¹</span>tan</button>
+    <button class="btn" onclick="p('OPBR')"><span class="sh">{</span>(</button>
+    <button class="btn" onclick="p('CLBR')"><span class="sh">}</span>)</button>
+    <button class="btn" onclick="p('MP')"><span class="sh">M-</span>M+</button>
+  </div>
+  <!-- Memory/const row -->
+  <div class="brow r6">
+    <button class="btn" onclick="p('RCL')"><span class="sh">STO</span>RCL</button>
+    <button class="btn" onclick="p('ENG')"><span class="sh">←ENG</span>ENG</button>
+    <button class="btn" onclick="p('PI')"><span class="sh">e</span>π</button>
+    <button class="btn" onclick="p('SD')"><span class="sh">F↔D</span>S↔D</button>
+    <button class="btn del" onclick="p('DEL')"><span class="sh">INS</span>DEL</button>
+    <button class="btn ac" onclick="p('AC')"><span class="sh">OFF</span>AC</button>
+  </div>
+  <!-- Number pad -->
+  <div class="brow r5">
+    <button class="btn num" onclick="p('7')"><span class="sh">STAT</span>7</button>
+    <button class="btn num" onclick="p('8')"><span class="sh">TABLE</span>8</button>
+    <button class="btn num" onclick="p('9')"><span class="sh">CMPLX</span>9</button>
+    <button class="btn del" style="font-size:10px;min-height:32px" onclick="p('DEL')">DEL</button>
+    <button class="btn ac" style="font-size:10px;min-height:32px" onclick="p('AC')">AC</button>
+  </div>
+  <div class="brow r5">
+    <button class="btn num" onclick="p('4')"><span class="sh">EQN</span>4</button>
+    <button class="btn num" onclick="p('5')"><span class="sh">MAT</span>5</button>
+    <button class="btn num" onclick="p('6')"><span class="sh">VECT</span>6</button>
+    <button class="btn op" onclick="p('MUL')">×</button>
+    <button class="btn op" onclick="p('DIV')">÷</button>
+  </div>
+  <div class="brow r5">
+    <button class="btn num" onclick="p('1')"><span class="sh">BASE-N</span>1</button>
+    <button class="btn num" onclick="p('2')">2</button>
+    <button class="btn num" onclick="p('3')">3</button>
+    <button class="btn op" onclick="p('ADD')">+</button>
+    <button class="btn op" onclick="p('SUB')">−</button>
+  </div>
+  <div class="brow r5">
+    <button class="btn num" onclick="p('0')">0</button>
+    <button class="btn num" onclick="p('DOT')">.</button>
+    <button class="btn op" style="font-size:9px;line-height:1.3" onclick="p('EXP')">×10<sup>n</sup></button>
+    <button class="btn op" onclick="p('ANS')">Ans</button>
+    <button class="btn eq" onclick="p('EQ')">=</button>
+  </div>
+  <div class="hint">SHIFT+key for orange functions · Click D/R to toggle angle mode</div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.5.2/math.min.js"></script>
+<script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.5.2/math.min.js"></script>
+<script>
+let expr='', res='', sOn=false, aOn=false, deg=true, mem=0, ans=0, evaled=false;
+const de=document.getElementById('de'), dr=document.getElementById('dr'), ca=document.getElementById('ca');
+
+function toggleDeg(){deg=!deg;upd();}
+
+function upd(){
+  let h=expr
+    .replace(/\^2/g,'<sup>2</sup>')
+    .replace(/\^3/g,'<sup>3</sup>')
+    .replace(/\^4/g,'<sup>4</sup>')
+    .replace(/\^\(-1\)/g,'<sup>-1</sup>');
+  de.innerHTML=(h||'')+'<span class="cur"></span>';
+  dr.textContent=res;
+  function tog(id,v){document.getElementById(id).classList.toggle('on',v);}
+  tog('ss',sOn); tog('sa',aOn); tog('sd',deg); tog('sr',!deg); tog('sm',mem!==0);
+  ca.classList.toggle('son',sOn);
+  ca.classList.toggle('aon',aOn);
+}
+
+function tok2math(e){
+  let s=e;
+  s=s.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-');
+  s=s.replace(/Ans/g, ans);
+  return s;
+}
+
+function p(k){
+  if(k==='EQ'){ // evaluate
+    try{
+      let exp=tok2math(expr);
+      let scope={};
+      if(deg){
+        scope.sin=x=>math.sin(math.unit(x,'deg'));
+        scope.cos=x=>math.cos(math.unit(x,'deg'));
+        scope.tan=x=>math.tan(math.unit(x,'deg'));
+        scope.asin=x=>math.asin(x)*180/Math.PI;
+        scope.acos=x=>math.acos(x)*180/Math.PI;
+        scope.atan=x=>math.atan(x)*180/Math.PI;
+      }
+      res=math.evaluate(exp,scope).toString();
+      ans=res; evaled=true;
+    }catch(e){res='Math ERROR';}
+  }else if(k==='AC'){expr='';res='';}
+  else if(k==='DEL'){expr=expr.slice(0,-1);}
+  else if(k==='SHIFT'){sOn=!sOn;}
+  else if(k==='ALPHA'){aOn=!aOn;}
+  else if(k==='MP'){mem+=Number(res)||0;}
+  else if(k==='RCL'){expr+=mem;}
+  else{
+    if(evaled){expr='';evaled=false;}
+    expr+=mapKey(k);
+  }
+  upd();
+}
+
+function mapKey(k){
+  if(sOn){ sOn=false; return shiftMap(k); }
+  if(aOn){ aOn=false; return alphaMap(k); }
+  switch(k){
+    case 'ADD': return '+';
+    case 'SUB': return '-';
+    case 'MUL': return '*';
+    case 'DIV': return '/';
+    case 'DOT': return '.';
+    case 'SQ': return '^2';
+    case 'PWR': return '^';
+    case 'INV': return '^-1';
+    case 'LOG': return 'log10(';
+    case 'LN': return 'log(';
+    case 'SIN': return 'sin(';
+    case 'COS': return 'cos(';
+    case 'TAN': return 'tan(';
+    case 'PI': return 'pi';
+    case 'EXP': return '*10^';
+    case 'ANS': return 'Ans';
+    case 'OPBR': return '(';
+    case 'CLBR': return ')';
+    case 'NEG': return '-';
+    // New advanced functions
+    case 'INTG': return 'integrate(';   // ∫f dx
+    case 'DERV': return 'derivative(';  // d/dx
+    case 'POL': return 'polar(';        // →r∠θ
+    case 'REC': return 'rect(';         // →a+bi
+    default: return k;
+  }
+}
+
+function shiftMap(k){
+  switch(k){
+    case 'SIN': return 'asin(';
+    case 'COS': return 'acos(';
+    case 'TAN': return 'atan(';
+    case 'LOG': return '10^(';
+    case 'LN': return 'exp(';
+    case 'INV': return 'factorial(';
+    default: return '';
+  }
+}
+
+function alphaMap(k){
+  switch(k){
+    case 'MP': return 'M-'; // memory minus
+    default: return '';
+  }
+}
+
+// Custom wrappers for advanced functions
+math.import({
+  integrate: function(expr){
+    // Example: integrate("x^2", "x")
+    try {
+      return math.integral(expr, 'x').toString();
+    } catch(e){ return 'Math ERROR'; }
+  },
+  derivative: function(expr){
+    // Example: derivative("sin(x)", "x")
+    try {
+      return math.derivative(expr, 'x').toString();
+    } catch(e){ return 'Math ERROR'; }
+  },
+  polar: function(x,y){
+    // Convert rectangular (x,y) to polar (r,θ)
+    let r=math.sqrt(x*x+y*y);
+    let theta=deg ? math.atan2(y,x)*180/Math.PI : math.atan2(y,x);
+    return `(${r}, ${theta}${deg?'°':''})`;
+  },
+  rect: function(r,theta){
+    // Convert polar (r,θ) to rectangular (x,y)
+    let t=deg ? math.unit(theta,'deg') : theta;
+    let x=r*math.cos(t), y=r*math.sin(t);
+    return `(${x}, ${y})`;
+  }
+}, {override:true});
+</script>
+
+var expr='',res='',sOn=false,aOn=false,deg=true,mem=0,ans=0,evaled=false;
+var de=document.getElementById('de'),dr=document.getElementById('dr'),ca=document.getElementById('ca');
+
+function toggleDeg(){deg=!deg;upd();}
+
+function upd(){
+  var h=expr
+    .replace(/\^2(?![0-9])/g,'<sup>2</sup>')
+    .replace(/\^3(?![0-9])/g,'<sup>3</sup>')
+    .replace(/\^4(?![0-9])/g,'<sup>4</sup>')
+    .replace(/\^\(-1\)/g,'<sup>-1</sup>');
+  de.innerHTML=(h||'')+'<span class="cur"></span>';
+  dr.textContent=res;
+  function tog(id,v){document.getElementById(id).classList.toggle('on',v);}
+  tog('ss',sOn);tog('sa',aOn);tog('sd',deg);tog('sr',!deg);tog('sm',mem!==0);
+  ca.classList.toggle('son',sOn);
+  ca.classList.toggle('aon',aOn);
+}
+
+function tok2math(e){
+  var s=e;
+  s=s.replace(/×10\^\(/g,'*10^(');
+  s=s.replace(/×/g,'*');s=s.replace(/÷/g,'/');s=s.replace(/−/g,'-');
+  s=s.replace(/π/g,'pi');s=s.replace(/ℯ/g,'eC
