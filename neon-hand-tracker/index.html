@@ -1,71 +1,357 @@
-import cv2
-import mediapipe as mp
-from mediapipe.tasks import python
-from mediapipe.tasks.python import vision
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Neon Hand Tracker</title>
+  <style>
+    body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; }
+    h2 { color: #00ffcc; font-family: monospace; }
+    #container { position: relative; }
+    video { display: none; }
+    canvas { border: 2px solid #00ffcc; }
+    #status { color: #00ffcc; font-family: monospace; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h2>🖐️ Neon Hand Tracker</h2>
+  <p id="status">Loading MediaPipe...</p>
+  <div id="container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+  </div>
 
-# 1. Configure the Tasks Pipeline for Python 3.13
-model_path = 'hand_landmarker.task'  # Must be saved in your project folder
-BaseOptions = mp.tasks.BaseOptions
-HandLandmarker = mp.tasks.vision.HandLandmarker
-HandLandmarkerOptions = mp.tasks.vision.HandLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 
-options = HandLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.VIDEO,
-    num_hands=2
-)
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
 
-# 2. Hardcoded mapping of hand connections (Replaces mp_hands.HAND_CONNECTIONS)
-HAND_CONNECTIONS = [
-    (0, 1), (1, 2), (2, 3), (3, 4),        # Thumb
-    (0, 5), (5, 6), (6, 7), (7, 8),        # Index Finger
-    (9, 10), (10, 11), (11, 12),           # Middle Finger
-    (13, 14), (14, 15), (15, 16),          # Ring Finger
-    (0, 17), (17, 18), (18, 19), (19, 20), # Pinky Finger
-    (5, 9), (9, 13), (13, 17)              # Palm Base Line
-]
+    canvas.width = 640;
+    canvas.height = 480;
 
-# 3. Initialize Video Feed
-cap = cv2.VideoCapture(0)
+    const NEON_COLORS = [
+      '#ff00ff', '#00ffff', '#00ff00', '#ffff00', '#ff8800'
+    ];
 
-with HandLandmarker.create_from_options(options) as landmarker:
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
-            print("Ignoring empty camera frame.")
-            continue
-            
-        frame = cv2.flip(frame, 1)
-        h, w, _ = frame.shape
-        
-        # Calculate time tracker index required for video tracking mode
-        timestamp_ms = int(cap.get(cv2.CAP_PROP_POS_MSEC))
-        
-        # Format the BGR canvas layout into a native MediaPipe Image container
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-        result = landmarker.detect_for_video(mp_image, timestamp_ms)
-        
-        # Process and draw custom graphics if coordinates are caught
-        if result.hand_landmarks:
-            for hand_landmarks in result.hand_landmarks:
-                # Convert normalized decimal points back to integer pixel screen locations
-                points = []
-                for lm in hand_landmarks:
-                    points.append((int(lm.x * w), int(lm.y * h)))
-                
-                # Draw the skeletal bone structures
-                for start_idx, end_idx in HAND_CONNECTIONS:
-                    if start_idx < len(points) and end_idx < len(points):
-                        cv2.line(frame, points[start_idx], points[end_idx], (255, 0, 0), 2)
-                
-                # Draw the joint dots
-                for pt in points:
-                    cv2.circle(frame, pt, 5, (0, 0, 255), cv2.FILLED)
-                    
-        cv2.imshow("Python 3.13 MediaPipe Tasks Pipeline", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+    function drawNeonLine(ctx, x1, y1, x2, y2, color) {
+      // Glow effect
+      for (let i = 8; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = i * 1.5;
+        ctx.globalAlpha = 0.15;
+        ctx.stroke();
+      }
+      // Bright center line
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.globalAlpha = 1;
+      ctx.stroke();
+    }
 
-cap.release()
-cv2.destroyAllWindows()
+    function drawNeonCircle(ctx, x, y, radius, color) {
+      for (let i = 3; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius + i * 3, 0, Math.PI * 2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.3;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.stroke();
+    }
+
+    const hands = new Hands({
+      locateFile: (file) =>
+        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((results) => {
+      // Draw video frame (darkened)
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // Dark overlay
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (results.multiHandLandmarks) {
+        for (const landmarks of results.multiHandLandmarks) {
+          const pts = landmarks.map(lm => ({
+            x: (1 - lm.x) * canvas.width,  // flipped
+            y: lm.y * canvas.height
+          }));
+
+          const fingertips = [pts[4], pts[8], pts[12], pts[16], pts[20]];
+
+          // Lines between all fingertips
+          let colorIdx = 0;
+          for (let i = 0; i < fingertips.length; i++) {
+            for (let j = i + 1; j < fingertips.length; j++) {
+              const color = NEON_COLORS[colorIdx % NEON_COLORS.length];
+              drawNeonLine(ctx,
+                fingertips[i].x, fingertips[i].y,
+                fingertips[j].x, fingertips[j].y,
+                color
+              );
+              colorIdx++;
+            }
+          }
+
+          // Circles on fingertips
+          fingertips.forEach((tip, idx) => {
+            drawNeonCircle(ctx, tip.x, tip.y, 8, NEON_COLORS[idx]);
+          });
+
+          // Palm outline
+          const palmPts = [pts[0], pts[5], pts[9], pts[13], pts[17]];
+          for (let i = 0; i < palmPts.length; i++) {
+            const next = palmPts[(i + 1) % palmPts.length];
+            drawNeonLine(ctx,
+              palmPts[i].x, palmPts[i].y,
+              next.x, next.y,
+              '#cccc66'
+            );
+          }
+        }
+      }
+
+      // Status text
+      ctx.fillStyle = '#00ffcc';
+      ctx.font = '16px monospace';
+      ctx.globalAlpha = 1;
+      ctx.fillText('Neon Hand Tracker | JS Version', 10, 25);
+    });
+
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        await hands.send({ image: video });
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start().then(() => {
+      status.textContent = '✅ Camera active - Show your hand!';
+    }).catch(err => {
+      status.textContent = '❌ Camera error: ' + err.message;
+    });
+  </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Neon Hand Tracker</title>
+  <style>
+    body { margin: 0; background: #000; display: flex; flex-direction: column; align-items: center; }
+    h2 { color: #00ffcc; font-family: monospace; }
+    video { display: none; }
+    canvas { border: 2px solid #00ffcc; }
+    #status { color: #00ffcc; font-family: monospace; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h2>🖐️ Neon Hand Tracker</h2>
+  <p id="status">Loading MediaPipe...</p>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+
+    canvas.width = 720;
+    canvas.height = 540;
+
+    const NEON_COLORS = [
+      '#ff00ff', '#00ffff', '#00ff00', '#ffff00', '#ff8800',
+      '#ff0088', '#88ff00', '#0088ff', '#ff4400', '#aa00ff'
+    ];
+
+    function drawNeonLine(x1, y1, x2, y2, color, width = 2) {
+      // Outer glow
+      for (let i = 6; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = i * width;
+        ctx.globalAlpha = 0.08;
+        ctx.stroke();
+      }
+      // Bright core
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = 1;
+      ctx.stroke();
+      // White center
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = 1;
+      ctx.stroke();
+    }
+
+    function drawNeonDot(x, y, color) {
+      // Glow
+      for (let i = 4; i >= 1; i--) {
+        ctx.beginPath();
+        ctx.arc(x, y, 4 + i * 4, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.08;
+        ctx.fill();
+      }
+      // Core dot
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 1;
+      ctx.fill();
+      // White center
+      ctx.beginPath();
+      ctx.arc(x, y, 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 1;
+      ctx.fill();
+    }
+
+    function getLandmarks(hand) {
+      return hand.map(lm => ({
+        x: (1 - lm.x) * canvas.width,
+        y: lm.y * canvas.height
+      }));
+    }
+
+    const hands = new Hands({
+      locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((results) => {
+      // Draw darkened video
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
+
+      const FINGERTIP_IDS = [4, 8, 12, 16, 20];
+      const PALM_IDS = [0, 5, 9, 13, 17];
+
+      // Get all hands' fingertips
+      const allHandsData = results.multiHandLandmarks.map(hand => {
+        const pts = getLandmarks(hand);
+        return {
+          fingertips: FINGERTIP_IDS.map(i => pts[i]),
+          palm: PALM_IDS.map(i => pts[i]),
+          all: pts
+        };
+      });
+
+      // --- CROSS-HAND LINES (main effect) ---
+      if (allHandsData.length === 2) {
+        const tips0 = allHandsData[0].fingertips;
+        const tips1 = allHandsData[1].fingertips;
+
+        let colorIdx = 0;
+        // Each fingertip of hand0 connects to each fingertip of hand1
+        for (let i = 0; i < tips0.length; i++) {
+          for (let j = 0; j < tips1.length; j++) {
+            const color = NEON_COLORS[colorIdx % NEON_COLORS.length];
+            drawNeonLine(tips0[i].x, tips0[i].y, tips1[j].x, tips1[j].y, color, 1.5);
+            colorIdx++;
+          }
+        }
+      }
+
+      // --- SAME HAND lines + palm outline ---
+      for (const handData of allHandsData) {
+        const { fingertips, palm } = handData;
+
+        // Fingertip to fingertip within same hand
+        let colorIdx = 0;
+        for (let i = 0; i < fingertips.length; i++) {
+          for (let j = i + 1; j < fingertips.length; j++) {
+            const color = NEON_COLORS[colorIdx % NEON_COLORS.length];
+            drawNeonLine(fingertips[i].x, fingertips[i].y,
+                         fingertips[j].x, fingertips[j].y, color, 1);
+            colorIdx++;
+          }
+        }
+
+        // Palm outline (golden)
+        for (let i = 0; i < palm.length; i++) {
+          const next = palm[(i + 1) % palm.length];
+          drawNeonLine(palm[i].x, palm[i].y, next.x, next.y, '#ccaa00', 1);
+        }
+
+        // Dots on fingertips
+        fingertips.forEach((tip, idx) => {
+          drawNeonDot(tip.x, tip.y, NEON_COLORS[idx]);
+        });
+      }
+
+      // HUD
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#00ffcc';
+      ctx.font = 'bold 15px monospace';
+      ctx.fillText(`Hands: ${results.multiHandLandmarks.length} | Neon Hand Tracker`, 10, 25);
+    });
+
+    const camera = new Camera(video, {
+      onFrame: async () => { await hands.send({ image: video }); },
+      width: 640, height: 480
+    });
+
+    camera.start()
+      .then(() => { status.textContent = '✅ Camera active - Show both hands!'; })
+      .catch(err => { status.textContent = '❌ Camera error: ' + err.message; });
+  </script>
+</body>
+</html>
