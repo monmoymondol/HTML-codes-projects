@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>⚡ CYBERPUNK NEON HANDS | Ultimate Visualizer</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      overflow: hidden;
+    }
+    #container {
+      position: relative;
+      width: 720px;
+      height: 540px;
+      box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: black;
+    }
+    video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      color: #0ff;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 0 0 15px #0ff;
+      pointer-events: none;
+      z-index: 10;
+      letter-spacing: 1px;
+    }
+    #status {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #ff0;
+      font-size: 12px;
+      text-shadow: 0 0 10px #ff0;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .theme-indicator {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      text-shadow: 0 0 20px currentColor;
+      z-index: 10;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="container">
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+  <h1><span >MADE WITH SAGOR MONDOL</span></h1>
+  <div id="hud">
+    <span id="fps">⚡ 60 FPS</span>
+    <span id="gesture">🤖 GESTURE: --</span>
+    <span id="hands-count">👆 0</span>
+  </div>
+  <div id="status">🎛️ KEYS 1-8: Themes | ✊✌👍👎🖐 Gestures</div>
+  <div class="theme-indicator" id="theme-name">🌈 CYBERPUNK</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+<script>
+  (function() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = 720;
+    canvas.height = 540;
+
+    // ----- THEME SYSTEM -----
+    const themes = {
+      1: { name: 'CYBERPUNK', primary: ['#ff00ff','#00ffff','#ff0088','#00ff88','#ffff00','#ff4400'], bg: 'rgba(5,0,20,0.55)', accent: '#0ff' },
+      2: { name: 'MATRIX', primary: ['#00ff41','#00ff41','#00cc33','#008f11','#00ff41','#00ff41'], bg: 'rgba(0,10,0,0.7)', accent: '#0f0' },
+      3: { name: 'TRON', primary: ['#00ffff','#ff00ff','#00ffff','#ff0088','#00ffff','#ff00ff'], bg: 'rgba(0,0,20,0.65)', accent: '#0ff' },
+      4: { name: 'GALAXY', primary: ['#aa44ff','#ff66aa','#66ccff','#ffaa00','#ff44aa','#aa88ff'], bg: 'rgba(10,0,20,0.6)', accent: '#d9f' },
+      5: { name: 'RAINBOW', primary: ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#aa00ff'], bg: 'rgba(0,0,0,0.5)', accent: '#fff' },
+      6: { name: 'FIRE', primary: ['#ff4400','#ff8800','#ffaa00','#ffcc00','#ff6600','#ff2200'], bg: 'rgba(30,5,0,0.65)', accent: '#f80' },
+      7: { name: 'ICE', primary: ['#00ccff','#88eeff','#00aaff','#ffffff','#aaddff','#00ddff'], bg: 'rgba(0,15,30,0.7)', accent: '#8ef' },
+      8: { name: 'GOLD', primary: ['#ffd700','#ffaa00','#ffcc44','#ffdd88','#ffb800','#ffaa22'], bg: 'rgba(20,10,0,0.6)', accent: '#fd0' }
+    };
+
+    let currentTheme = themes[1];
+    let targetTheme = themes[1];
+    let themeTransition = 0;
+
+    // ----- PARTICLES ENGINE -----
+    let particles = [];
+    const MAX_PARTICLES = 400;
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2.5;
+        this.vy = (Math.random() - 1.5) * 2.5 - 0.8;
+        this.size = Math.random() * 4 + 2;
+        this.color = color;
+        this.life = 1.0;
+        this.decay = 0.008 + Math.random() * 0.02;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+        this.size *= 0.998;
+      }
+      draw(ctx) {
+        if (this.life <= 0.02) return;
+        ctx.globalAlpha = this.life * 0.9;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+        // glow
+        ctx.globalAlpha = this.life * 0.4;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size*0.7, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    function spawnParticles(x, y, color, count = 5) {
+      for (let i=0; i<count; i++) {
+        if (particles.length < MAX_PARTICLES) {
+          particles.push(new Particle(x, y, color));
+        }
+      }
+    }
+
+    // ----- GESTURE RECOGNITION (simple) -----
+    function recognizeGesture(landmarks) {
+      if (!landmarks || landmarks.length === 0) return '--';
+      const pts = landmarks.map(l => ({x: l.x, y: l.y}));
+      
+      const thumbTip = pts[4]; const thumbIp = pts[3];
+      const indexTip = pts[8]; const indexPip = pts[6];
+      const middleTip = pts[12]; const middlePip = pts[10];
+      const ringTip = pts[16]; const ringPip = pts[14];
+      const pinkyTip = pts[20]; const pinkyPip = pts[18];
+      const wrist = pts[0];
+
+      const isFingerExtended = (tip, pip) => tip.y < pip.y - 0.04;
+      
+      const thumbExtended = thumbTip.x < thumbIp.x - 0.04; // for right hand flipped later? we use raw x
+      const indexExtended = isFingerExtended(indexTip, indexPip);
+      const middleExtended = isFingerExtended(middleTip, middlePip);
+      const ringExtended = isFingerExtended(ringTip, ringPip);
+      const pinkyExtended = isFingerExtended(pinkyTip, pinkyPip);
+
+      // Fist: all fingers not extended
+      if (!indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) return '✊ FIST';
+      // Open hand: all extended
+      if (indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended) return '🖐 OPEN';
+      // Peace: index & middle extended, others not
+      if (indexExtended && middleExtended && !ringExtended && !pinkyExtended && !thumbExtended) return '✌ PEACE';
+      // Thumb up: thumb extended, others not
+      if (thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended) return '👍 THUMBS UP';
+      // Thumb down (thumb extended but pointing down? simplified: thumb tip below wrist)
+      if (thumbTip.y > wrist.y + 0.12 && !indexExtended && !middleExtended) return '👎 THUMBS DOWN';
+      
+      return '🤙 CUSTOM';
+    }
+
+    // ----- DRAWING HELPERS -----
+    function drawNeonLine(x1, y1, x2, y2, color, width = 2.2) {
+      for (let i=5; i>=1; i--) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = i * width * 0.9;
+        ctx.globalAlpha = 0.07;
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.globalAlpha = 0.9;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 0.6;
+      ctx.globalAlpha = 0.7;
+      ctx.stroke();
+    }
+
+    function drawNeonDot(x, y, color, radius = 6) {
+      for (let i=4; i>=1; i--) {
+        ctx.beginPath();
+        ctx.arc(x, y, radius + i*3.5, 0, Math.PI*2);
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.08;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 1;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, radius*0.5, 0, Math.PI*2);
+      ctx.fillStyle = 'white';
+      ctx.globalAlpha = 1;
+      ctx.fill();
+    }
+
+    function drawEnergySphere(cx, cy, radius, color1, color2) {
+      for (let i=8; i>=1; i--) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius + i*4, 0, Math.PI*2);
+        ctx.fillStyle = i%2===0 ? color1 : color2;
+        ctx.globalAlpha = 0.04;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI*2);
+      ctx.fillStyle = color1;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius*0.7, 0, Math.PI*2);
+      ctx.fillStyle = 'white';
+      ctx.globalAlpha = 0.9;
+      ctx.fill();
+    }
+
+    // ----- STARFIELD BACKGROUND -----
+    let stars = [];
+    for (let i=0; i<180; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.8 + 0.5,
+        twinkle: Math.random() * 0.03 + 0.005
+      });
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = currentTheme.bg;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      
+      // stars
+      stars.forEach(s => {
+        s.twinkle += 0.02;
+        let alpha = 0.5 + Math.sin(s.twinkle) * 0.3;
+        ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+        ctx.fill();
+      });
+    }
+
+    // ----- MAIN MEDIAPIPE LOOP -----
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.75,
+      minTrackingConfidence: 0.6
+    });
+
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+    let currentGestures = [];
+
+    const FINGERTIP_IDS = [4,8,12,16,20];
+    const PALM_IDS = [0,5,9,13,17];
+
+    hands.onResults((results) => {
+      const now = performance.now();
+      frameCount++;
+      if (now - lastFrameTime >= 1000) {
+        fps = Math.round(frameCount / ((now - lastFrameTime)/1000));
+        frameCount = 0;
+        lastFrameTime = now;
+        document.getElementById('fps').textContent = `⚡ ${fps} FPS`;
+      }
+
+      // Smooth theme transition
+      if (themeTransition < 1) themeTransition += 0.03;
+      currentTheme = targetTheme;
+
+      // Draw background & video overlay
+      ctx.save();
+      ctx.scale(-1,1);
+      ctx.translate(-canvas.width, 0);
+      ctx.drawImage(results.image, 0,0,canvas.width,canvas.height);
+      ctx.restore();
+      
+      drawBackground();
+
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        document.getElementById('hands-count').textContent = '👆 0';
+        document.getElementById('gesture').textContent = '🤖 GESTURE: --';
+        currentGestures = [];
+        // still draw particles
+        updateAndDrawParticles();
+        return;
+      }
+
+      const handsData = results.multiHandLandmarks.map(hand => {
+        const pts = hand.map(l => ({x: (1-l.x)*canvas.width, y: l.y*canvas.height}));
+        return {
+          fingertips: FINGERTIP_IDS.map(i => pts[i]),
+          palm: PALM_IDS.map(i => pts[i]),
+          allPts: pts,
+          rawLandmarks: hand
+        };
+      });
+
+      document.getElementById('hands-count').textContent = `👆 ${handsData.length}`;
+
+      // Gesture recognition (use first hand for simplicity, or both)
+      currentGestures = results.multiHandLandmarks.map(lm => recognizeGesture(lm));
+      let displayGesture = currentGestures.length > 0 ? currentGestures[0] : '--';
+      if (currentGestures.length === 2) {
+        displayGesture = currentGestures[0] + ' / ' + currentGestures[1];
+      }
+      document.getElementById('gesture').textContent = `🤖 ${displayGesture}`;
+
+      // Theme switching via gestures (only if one hand clear gesture)
+      if (currentGestures.length === 1) {
+        const g = currentGestures[0];
+        if (g.includes('FIST')) switchTheme(6);        // Fire
+        else if (g.includes('PEACE')) switchTheme(5);   // Rainbow
+        else if (g.includes('THUMBS UP')) switchTheme(8); // Gold
+        else if (g.includes('THUMBS DOWN')) switchTheme(7); // Ice
+        else if (g.includes('OPEN')) switchTheme(1);    // Cyberpunk
+      }
+
+      // ----- DRAW CONNECTIONS & EFFECTS -----
+      const primaryColors = currentTheme.primary;
+
+      // Cross-hand lines (if two hands)
+      if (handsData.length === 2) {
+        const tipsA = handsData[0].fingertips;
+        const tipsB = handsData[1].fingertips;
+        for (let i=0; i<tipsA.length; i++) {
+          for (let j=0; j<tipsB.length; j++) {
+            let col = primaryColors[(i+j) % primaryColors.length];
+            drawNeonLine(tipsA[i].x, tipsA[i].y, tipsB[j].x, tipsB[j].y, col, 1.8);
+            // spawn occasional particles
+            if (Math.random() < 0.15) spawnParticles((tipsA[i].x+tipsB[j].x)/2, (tipsA[i].y+tipsB[j].y)/2, col, 2);
+          }
+        }
+      }
+
+      // Same hand connections & energy sphere detection
+      handsData.forEach((handData, idx) => {
+        const { fingertips, palm, allPts } = handData;
+        
+        // fingertip interconnections
+        for (let i=0; i<fingertips.length; i++) {
+          for (let j=i+1; j<fingertips.length; j++) {
+            let col = primaryColors[(i+j) % primaryColors.length];
+            drawNeonLine(fingertips[i].x, fingertips[i].y, fingertips[j].x, fingertips[j].y, col, 1.4);
+          }
+        }
+
+        // palm outline
+        for (let i=0; i<palm.length; i++) {
+          let next = palm[(i+1)%palm.length];
+          drawNeonLine(palm[i].x, palm[i].y, next.x, next.y, '#ccaa33', 1.6);
+        }
+
+        // fingertips dots + comet trails
+        fingertips.forEach((tip, i) => {
+          let col = primaryColors[i % primaryColors.length];
+          drawNeonDot(tip.x, tip.y, col, 7);
+          // comet trail: spawn particles behind
+          spawnParticles(tip.x, tip.y, col, 2);
+        });
+
+        // Energy sphere: if all fingertips close together (average distance small)
+        if (fingertips.length === 5) {
+          let centerX = 0, centerY = 0;
+          fingertips.forEach(t => { centerX += t.x; centerY += t.y; });
+          centerX /= 5; centerY /= 5;
+          let maxDist = 0;
+          fingertips.forEach(t => {
+            let d = Math.hypot(t.x-centerX, t.y-centerY);
+            if (d > maxDist) maxDist = d;
+          });
+          if (maxDist < 50 && maxDist > 10) {
+            let sphereRadius = Math.max(15, 40 - maxDist*0.4);
+            drawEnergySphere(centerX, centerY, sphereRadius, primaryColors[0], primaryColors[2]);
+            if (Math.random()<0.4) spawnParticles(centerX, centerY, primaryColors[1], 3);
+          }
+        }
+      });
+
+      // Portal effect if two palms facing (simplified: distance between wrists)
+      if (handsData.length === 2) {
+        let wristA = handsData[0].allPts[0];
+        let wristB = handsData[1].allPts[0];
+        let dist = Math.hypot(wristA.x-wristB.x, wristA.y-wristB.y);
+        if (dist < 200) {
+          let midX = (wristA.x+wristB.x)/2;
+          let midY = (wristA.y+wristB.y)/2;
+          for (let r=30; r<90; r+=18) {
+            ctx.beginPath();
+            ctx.arc(midX, midY, r, 0, Math.PI*2);
+            ctx.strokeStyle = primaryColors[Math.floor(Date.now()/100)%primaryColors.length];
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.25;
+            ctx.stroke();
+          }
+          spawnParticles(midX, midY, '#ffffff', 4);
+        }
+      }
+
+      // Update and draw particles
+      updateAndDrawParticles();
+
+      // HUD text overlay
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = currentTheme.accent;
+      ctx.font = 'bold 14px "Courier New"';
+      ctx.fillText('⚡ CYBER NEON ENGINE', 15, 35);
+    });
+
+    function updateAndDrawParticles() {
+      for (let i=particles.length-1; i>=0; i--) {
+        particles[i].update();
+        particles[i].draw(ctx);
+        if (particles[i].life <= 0.02 || particles[i].x < -20 || particles[i].x > canvas.width+20 ||
+            particles[i].y < -20 || particles[i].y > canvas.height+20) {
+          particles.splice(i,1);
+        }
+      }
+    }
+
+    function switchTheme(num) {
+      if (themes[num]) {
+        targetTheme = themes[num];
+        themeTransition = 0;
+        document.getElementById('theme-name').textContent = '🌈 ' + themes[num].name;
+      }
+    }
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      const key = parseInt(e.key);
+      if (key >=1 && key <=8) {
+        switchTheme(key);
+      }
+    });
+
+    // Camera start
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        await hands.send({image: video});
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start().then(() => {
+      document.getElementById('status').textContent = '✅ ACTIVE | 1-8 Themes | Gestures control';
+    }).catch(err => {
+      document.getElementById('status').textContent = '❌ CAMERA ERROR: ' + err.message;
+    });
+
+    // initial theme display
+    document.getElementById('theme-name').textContent = '🌈 CYBERPUNK';
+  })();
+</script>
+<span style="position:absolute;bottom:5px;right:10px;color:#0ff;font-size:12px;text-shadow:0 0 10px #0ff;">MADE BY SAGOR MONDOL</span>
+</body>
+</html>
