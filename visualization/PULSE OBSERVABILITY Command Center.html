@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>NEXUS VEIL | Cinematic Holographic Universe</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #010207;
+      --deep: #060b18;
+      --cyan: #00e5ff;
+      --magenta: #ff2d78;
+      --gold: #ffb347;
+      --text: #eef5ff;
+      --muted: #8899bb;
+      --glass: rgba(255, 255, 255, 0.03);
+      --glass-strong: rgba(255, 255, 255, 0.07);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --ease: cubic-bezier(0.23, 0.82, 0.32, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--void);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      cursor: none;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+      background: var(--magenta);
+      color: white;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    #bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      display: block;
+    }
+
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.05;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 25%, rgba(1, 2, 7, 0.85) 100%);
+    }
+
+    .cursor-dot, .cursor-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 999;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .cursor-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan), 0 0 24px var(--cyan);
+    }
+    .cursor-ring {
+      width: 34px;
+      height: 34px;
+      border: 1px solid rgba(0, 229, 255, 0.5);
+      transition: width 0.25s var(--ease), height 0.25s var(--ease), border-color 0.25s;
+    }
+    .cursor-ring.active {
+      width: 56px;
+      height: 56px;
+      border-color: var(--magenta);
+      background: rgba(255, 45, 120, 0.1);
+    }
+    @media (max-width: 860px) {
+      .cursor-dot, .cursor-ring {
+        display: none;
+      }
+      body {
+        cursor: auto;
+      }
+    }
+
+    #boot {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--void);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 18px;
+      transition: opacity 0.8s var(--ease), visibility 0.8s;
+    }
+    #boot.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #boot-lines {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--cyan);
+      letter-spacing: 0.04em;
+      min-height: 140px;
+      width: 340px;
+    }
+    #boot-lines div {
+      opacity: 0;
+      transform: translateY(4px);
+      animation: bootline 0.4s forwards;
+    }
+    .boot-bar {
+      width: 260px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .boot-bar::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--cyan), var(--magenta), var(--gold));
+      transform-origin: left;
+      animation: bootbar 1.8s var(--ease) forwards;
+    }
+    @keyframes bootbar {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+    @keyframes bootline {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    main {
+      position: relative;
+      z-index: 2;
+    }
+
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 5vw;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      background: rgba(1, 2, 7, 0.4);
+    }
+    .logo {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: 22px;
+      letter-spacing: 0.18em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text);
+    }
+    .logo::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: var(--cyan);
+      border-radius: 50%;
+      box-shadow: 0 0 14px var(--cyan);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1.2); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+    .nav-readout {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      display: flex;
+      gap: 28px;
+    }
+    .nav-readout span b {
+      color: var(--magenta);
+      font-weight: 400;
+    }
+    @media (max-width: 720px) {
+      .nav-readout {
+        display: none;
+      }
+    }
+
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      position: relative;
+      padding: 0 24px;
+    }
+    .hero-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 28px;
+      opacity: 0;
+      animation: rise 0.9s var(--ease) 0.3s forwards;
+    }
+    .hero h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 700;
+      font-size: clamp(3.8rem, 12vw, 10rem);
+      line-height: 0.88;
+      letter-spacing: -0.03em;
+      background: linear-gradient(140deg, #ffffff 20%, var(--cyan) 50%, var(--magenta) 80%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      opacity: 0;
+      animation: rise 1.2s var(--ease) 0.5s forwards;
+    }
+    .hero-sub {
+      margin-top: 30px;
+      max-width: 600px;
+      color: var(--muted);
+      font-weight: 300;
+      font-size: 18px;
+      line-height: 1.6;
+      opacity: 0;
+      animation: rise 1s var(--ease) 0.8s forwards;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .scroll-cue {
+      position: absolute;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.4em;
+      color: var(--muted);
+      opacity: 0;
+      animation: rise 1s var(--ease) 1.4s forwards;
+    }
+    .scroll-cue .line {
+      width: 1px;
+      height: 44px;
+      background: linear-gradient(var(--magenta), transparent);
+      animation: cue-scan 2.2s ease-in-out infinite;
+    }
+    @keyframes cue-scan {
+      0% { transform: scaleY(0); transform-origin: top; }
+      50% { transform: scaleY(1); transform-origin: top; }
+      51% { transform-origin: bottom; }
+      100% { transform: scaleY(0); transform-origin: bottom; }
+    }
+
+    section {
+      position: relative;
+      padding: 180px 5vw;
+    }
+    .section-head {
+      max-width: 680px;
+      margin-bottom: 100px;
+    }
+    .kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .kicker::before {
+      content: '';
+      width: 32px;
+      height: 1px;
+      background: var(--gold);
+    }
+    .section-head h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: clamp(2.2rem, 4.5vw, 3.8rem);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .section-head p {
+      margin-top: 22px;
+      color: var(--muted);
+      font-weight: 300;
+      font-size: 16px;
+      line-height: 1.75;
+      max-width: 540px;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(50px);
+      transition: opacity 1s var(--ease), transform 1s var(--ease);
+    }
+    .reveal.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .manifesto {
+      text-align: center;
+      padding-top: 120px;
+      padding-bottom: 120px;
+    }
+    .manifesto p {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(1.5rem, 3.8vw, 3rem);
+      font-weight: 500;
+      line-height: 1.4;
+      max-width: 960px;
+      margin: 0 auto;
+      color: rgba(238, 245, 255, 0.45);
+    }
+    .manifesto p em {
+      font-style: normal;
+      color: var(--text);
+      background: linear-gradient(90deg, var(--cyan), var(--magenta));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 32px;
+      perspective: 1600px;
+    }
+
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-radius: 24px;
+      padding: 38px 32px;
+      transform-style: preserve-3d;
+      transition: transform 0.2s ease-out, background 0.5s, border-color 0.5s, box-shadow 0.5s;
+      position: relative;
+      overflow: hidden;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(0, 229, 255, 0.2), transparent 65%);
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    .glass-card:hover::before {
+      opacity: 1;
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 229, 255, 0.5);
+      box-shadow: 0 25px 70px -25px rgba(0, 229, 255, 0.35);
+    }
+    .card-index {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--magenta);
+      letter-spacing: 0.12em;
+      margin-bottom: 24px;
+      display: block;
+    }
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 24px;
+    }
+    .card-icon svg {
+      width: 100%;
+      height: 100%;
+      stroke: var(--cyan);
+      fill: none;
+      stroke-width: 1.3;
+    }
+    .glass-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+    .glass-card p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.7;
+      font-weight: 300;
+    }
+
+    .interface-demo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 70px;
+      align-items: center;
+    }
+    @media (max-width: 960px) {
+      .interface-demo {
+        grid-template-columns: 1fr;
+      }
+    }
+    .demo-panel {
+      background: linear-gradient(160deg, var(--glass-strong), var(--glass));
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-radius: 28px;
+      padding: 40px;
+    }
+    .demo-readout {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .demo-readout b {
+      color: var(--gold);
+      font-weight: 400;
+    }
+    #wave-svg {
+      width: 100%;
+      height: 150px;
+      display: block;
+    }
+    #wave-path {
+      fill: none;
+      stroke: url(#waveGrad);
+      stroke-width: 2;
+      filter: drop-shadow(0 0 10px rgba(255, 45, 120, 0.6));
+    }
+    .slider-row {
+      margin-top: 28px;
+    }
+    .slider-row label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 2px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--magenta);
+      box-shadow: 0 0 16px var(--magenta);
+      cursor: none;
+    }
+    .engage-btn {
+      margin-top: 32px;
+      width: 100%;
+      padding: 18px;
+      background: transparent;
+      border: 1px solid rgba(255, 45, 120, 0.5);
+      color: var(--magenta);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.22em;
+      border-radius: 12px;
+      cursor: none;
+      position: relative;
+      overflow: hidden;
+      transition: color 0.4s, border-color 0.4s;
+    }
+    .engage-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, var(--magenta), var(--cyan));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.5s var(--ease);
+      z-index: -1;
+    }
+    .engage-btn:hover {
+      color: white;
+      border-color: transparent;
+    }
+    .engage-btn:hover::before {
+      transform: scaleX(1);
+    }
+
+    .access {
+      text-align: center;
+      padding-bottom: 140px;
+    }
+    .access-card {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border-radius: 32px;
+      padding: 90px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .access-card::after {
+      content: '';
+      position: absolute;
+      width: 550px;
+      height: 550px;
+      background: radial-gradient(circle, rgba(255, 179, 71, 0.18), transparent 70%);
+      top: -220px;
+      right: -220px;
+      pointer-events: none;
+    }
+    .access-card h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .access-card p {
+      color: var(--muted);
+      font-weight: 300;
+      max-width: 500px;
+      margin: 0 auto 44px;
+      line-height: 1.8;
+    }
+    .cta-row {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary, .btn-ghost {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.18em;
+      padding: 18px 34px;
+      border-radius: 12px;
+      cursor: none;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, var(--cyan), var(--magenta));
+      color: white;
+      border: none;
+      font-weight: 600;
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text);
+    }
+
+    footer {
+      padding: 50px 5vw 70px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.001s !important;
+        transition-duration: 0.001s !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div id="boot-lines" class="mono"></div>
+    <div class="boot-bar"></div>
+  </div>
+
+  <canvas id="bg-canvas"></canvas>
+  <div class="grain"></div>
+  <div class="vignette"></div>
+
+  <div class="cursor-ring" id="cursorRing"></div>
+  <div class="cursor-dot" id="cursorDot"></div>
+
+  <main>
+    <nav>
+      <div class="logo">NEXUS VEIL</div>
+      <div class="nav-readout mono">
+        <span>VECTOR <b id="sigX">0.000</b></span>
+        <span>DEPTH <b id="sigY">0.000</b></span>
+        <span>STATUS <b>LIVE</b></span>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-eyebrow">Cinematic Holographic Universe // v4.0</div>
+      <h1>NEXUS VEIL</h1>
+      <p class="hero-sub">Step beyond the screen. A living particle dream where light, depth, and motion create a surreal digital dimension.</p>
+      <div class="scroll-cue"><span>DESCEND</span><div class="line"></div></div>
+    </header>
+
+    <section class="manifesto reveal">
+      <p>We craft <em>holographic realities</em> — interfaces that breathe, particles that dance, spaces that pull you into the <em>void between atoms</em>.</p>
+    </section>
+
+    <section class="modules">
+      <div class="section-head reveal">
+        <div class="kicker">Holographic Systems</div>
+        <h2>Four layers of the surreal.</h2>
+        <p>Each module is a floating fragment of the same universe — glass, light, and motion woven into a cinematic experience.</p>
+      </div>
+      <div class="modules-grid">
+        <div class="glass-card reveal">
+          <span class="card-index mono">HOLO_01 / NEBULA</span>
+          <div class="card-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg></div>
+          <h3>Nebula Render</h3>
+          <p>Volumetric particle clouds generated in real-time, shifting like cosmic dust across the field.</p>
+        </div>
+        <div class="glass-card reveal">
+          <span class="card-index mono">HOLO_02 / FLUX</span>
+          <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M3 18c3-6 6-6 9 0s6 6 9 0"/><circle cx="12" cy="12" r="1.5"/></svg></div>
+          <h3>Flux Kinetics</h3>
+          <p>Motion without keyframes — continuous curves that flow like liquid light through the interface.</p>
+        </div>
+        <div class="glass-card reveal">
+          <span class="card-index mono">HOLO_03 / VEIL</span>
+          <div class="card-icon"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="6" height="6" rx="1"/><rect x="13" y="13" width="6" height="6" rx="1"/></svg></div>
+          <h3>Veil Depth</h3>
+          <p>Glass planes suspended in true z-space, casting interference shadows onto layers beneath.</p>
+        </div>
+        <div class="glass-card reveal">
+          <span class="card-index mono">HOLO_04 / PULSE</span>
+          <div class="card-icon"><svg viewBox="0 0 24 24"><path d="M4 12h3l2-6 4 12 2-6h3"/></svg></div>
+          <h3>Pulse Interface</h3>
+          <p>Every input becomes a waveform — the environment listens, responds, and breathes with you.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="interface-demo">
+      <div class="demo-copy reveal">
+        <div class="section-head">
+          <div class="kicker">Live Pulse Wave</div>
+          <h2>Touch the frequency.</h2>
+          <p>Drag the sliders. The particle universe behind you modulates its heartbeat in real time.</p>
+        </div>
+      </div>
+      <div class="demo-panel reveal">
+        <div class="demo-readout">
+          <span>CHANNEL <b>HOLO-09</b></span>
+          <span>FREQ <b id="freqVal">3.5</b> Hz</span>
+          <span>AMP <b id="ampVal">0.75</b></span>
+        </div>
+        <svg id="wave-svg" viewBox="0 0 600 150" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#ff2d78"/>
+              <stop offset="50%" stop-color="#ffb347"/>
+              <stop offset="100%" stop-color="#00e5ff"/>
+            </linearGradient>
+          </defs>
+          <path id="wave-path" d=""/>
+        </svg>
+        <div class="slider-row">
+          <label><span>FREQUENCY</span><span id="freqLabel">3.5 Hz</span></label>
+          <input type="range" id="freqSlider" min="0.5" max="8" step="0.1" value="3.5">
+        </div>
+        <div class="slider-row">
+          <label><span>AMPLITUDE</span><span id="ampLabel">0.75</span></label>
+          <input type="range" id="ampSlider" min="0.1" max="1" step="0.01" value="0.75">
+        </div>
+        <button class="engage-btn" id="engageBtn">◈ IGNITE CINEMATIC BURST</button>
+      </div>
+    </section>
+
+    <section class="access reveal">
+      <div class="access-card">
+        <div class="kicker" style="justify-content:center;">Enter the Veil</div>
+        <h2>Reality is just the beginning.</h2>
+        <p>NEXUS VEIL is a prototype of the next digital frontier — a cinematic, holographic, living interface.</p>
+        <div class="cta-row">
+          <button class="btn-primary">Cross the Threshold</button>
+          <button class="btn-ghost">View the Codex</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>© 2026 NEXUS VEIL — CINEMATIC HOLOGRAPHIC UNIVERSE</span>
+      <span>CREATED BY SAGOR MONDOL</span>
+      <span id="footClock" class="mono">00:00:00</span>
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    (function() {
+      "use strict";
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var bootLines = document.getElementById('boot-lines');
+      var lines = [
+        '> INITIALIZING NEXUS VEIL v4.0',
+        '> LOADING CINEMATIC PARTICLE FIELD ...',
+        '> CALIBRATING HOLOGRAPHIC DEPTH ...',
+        '> PULSE WAVE SYNCHRONIZED',
+        '> WELCOME TO THE VEIL.'
+      ];
+      if (reduced) {
+        document.getElementById('boot').classList.add('hidden');
+      } else {
+        lines.forEach(function(t, i) {
+          var d = document.createElement('div');
+          d.textContent = t;
+          d.style.animationDelay = (i * 0.3) + 's';
+          bootLines.appendChild(d);
+        });
+        setTimeout(function() {
+          document.getElementById('boot').classList.add('hidden');
+        }, 2200);
+      }
+
+      var dot = document.getElementById('cursorDot');
+      var ring = document.getElementById('cursorRing');
+      var mx = window.innerWidth / 2, my = window.innerHeight / 2, rx = mx, ry = my;
+      window.addEventListener('mousemove', function(e) {
+        mx = e.clientX; my = e.clientY;
+        dot.style.left = mx + 'px'; dot.style.top = my + 'px';
+        document.getElementById('sigX').textContent = ((mx / window.innerWidth) - 0.5).toFixed(3);
+        document.getElementById('sigY').textContent = ((my / window.innerHeight) - 0.5).toFixed(3);
+      });
+      document.querySelectorAll('a, button, input, .glass-card').forEach(function(el) {
+        el.addEventListener('mouseenter', function() { ring.classList.add('active'); });
+        el.addEventListener('mouseleave', function() { ring.classList.remove('active'); });
+      });
+      (function tickCursor() {
+        rx += (mx - rx) * 0.14; ry += (my - ry) * 0.14;
+        ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+        requestAnimationFrame(tickCursor);
+      })();
+
+      function tickClock() {
+        var d = new Date();
+        var p = function(n) { return (n < 10 ? '0' : '') + n; };
+        document.getElementById('footClock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      }
+      tickClock(); setInterval(tickClock, 1000);
+
+      var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(en) { if (en.isIntersecting) en.target.classList.add('in-view'); });
+      }, { threshold: 0.18 });
+      document.querySelectorAll('.reveal').forEach(function(el) { io.observe(el); });
+
+      document.querySelectorAll('.glass-card').forEach(function(card) {
+        card.addEventListener('mousemove', function(e) {
+          var r = card.getBoundingClientRect();
+          var px = (e.clientX - r.left) / r.width;
+          var py = (e.clientY - r.top) / r.height;
+          card.style.setProperty('--mx', (px * 100) + '%');
+          card.style.setProperty('--my', (py * 100) + '%');
+          card.style.transform = 'rotateX(' + ((0.5 - py) * 14) + 'deg) rotateY(' + ((px - 0.5) * 14) + 'deg)';
+        });
+        card.addEventListener('mouseleave', function() { card.style.transform = 'rotateX(0) rotateY(0)'; });
+      });
+
+      var freqSlider = document.getElementById('freqSlider');
+      var ampSlider = document.getElementById('ampSlider');
+      var wavePath = document.getElementById('wave-path');
+      var t0 = 0;
+      function drawWave() {
+        var freq = parseFloat(freqSlider.value);
+        var amp = parseFloat(ampSlider.value);
+        document.getElementById('freqLabel').textContent = freq.toFixed(1) + ' Hz';
+        document.getElementById('ampLabel').textContent = amp.toFixed(2);
+        document.getElementById('freqVal').textContent = freq.toFixed(1);
+        document.getElementById('ampVal').textContent = amp.toFixed(2);
+        var w = 600, h = 150, mid = h / 2;
+        var d = 'M 0 ' + mid;
+        for (var x = 0; x <= w; x += 4) {
+          d += ' L ' + x + ' ' + (mid + Math.sin((x / w) * Math.PI * 2 * freq + t0) * (amp * 55));
+        }
+        wavePath.setAttribute('d', d);
+      }
+      function waveLoop() { t0 += reduced ? 0 : 0.06; drawWave(); requestAnimationFrame(waveLoop); }
+      waveLoop();
+
+      document.getElementById('engageBtn').addEventListener('click', function() { burstParticles(); });
+
+      /* ---------- THREE.JS CINEMATIC UNIVERSE ---------- */
+      var canvas = document.getElementById('bg-canvas');
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(new THREE.Color(0x010207), 1);
+
+      var scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x010207, 0.022);
+
+      var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
+      camera.position.set(0, 0.6, 16);
+      camera.lookAt(0, 0, 0);
+
+      var mainGroup = new THREE.Group();
+      scene.add(mainGroup);
+
+      var particleCount = reduced ? 2800 : 5500;
+      var geo = new THREE.BufferGeometry();
+      var positions = new Float32Array(particleCount * 3);
+      var colors = new Float32Array(particleCount * 3);
+
+      var cCyan = new THREE.Color(0x00e5ff);
+      var cMagenta = new THREE.Color(0xff2d78);
+      var cGold = new THREE.Color(0xffb347);
+
+      for (var i = 0; i < particleCount; i

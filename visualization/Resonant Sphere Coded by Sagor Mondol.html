@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resonant Sphere</title>
+
+    <!-- Three.js Core from Cloudflare CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+
+    <!-- MediaPipe Hands from jsDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js">
+    </script>
+
+    <!-- Google Fonts: Playfair Display -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0a0a0a;
+            --accent: #ffffff;
+            --accent-dim: rgba(255, 255, 255, 0.6);
+            --font-serif: 'Playfair Display', 'Georgia', 'Times New Roman', serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            font-family: var(--font-serif);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: default;
+        }
+
+        /* --- Three.js WebGL Canvas --- */
+        #webgl-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            display: block;
+        }
+
+        /* --- Mirrored Webcam Background Feed --- */
+        #webcam-background {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            /* Mirror for natural selfie view */
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s cubic-bezier(0.25, 0.1, 0.25, 1);
+            will-change: opacity;
+        }
+        #webcam-background.visible {
+            opacity: 0.15;
+        }
+
+        /* --- HUD 2D Canvas Overlay for Charging Gauge --- */
+        #hud-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            display: block;
+        }
+
+        /* --- UI Layer --- */
+        #ui-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 4;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(20px, 4vw, 48px);
+        }
+
+        /* Title */
+        .title {
+            font-family: var(--font-serif);
+            font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+            line-height: 1;
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.25);
+            align-self: flex-start;
+            animation: titleFadeIn 1.2s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+        }
+        @keyframes titleFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+                filter: blur(4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+            }
+        }
+
+        /* Bottom control row */
+        .controls-row {
+            align-self: center;
+            pointer-events: auto;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        /* Toggle Button */
+        .toggle-btn {
+            font-family: var(--font-serif);
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--accent-dim);
+            background: transparent;
+            border: 1.5px solid var(--accent-dim);
+            border-radius: 40px;
+            padding: 10px 26px;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            background-color: rgba(10, 10, 10, 0.35);
+            outline: none;
+            white-space: nowrap;
+        }
+        .toggle-btn:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            background-color: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 28px rgba(255, 255, 255, 0.12);
+            transform: translateY(-1px);
+        }
+        .toggle-btn:active {
+            transform: scale(0.96);
+            transition: transform 0.1s ease;
+        }
+        .toggle-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.18);
+        }
+
+        /* Status indicator dot */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+            transition: all 0.4s ease;
+            flex-shrink: 0;
+        }
+        .status-dot.inactive {
+            background: #f87171;
+            box-shadow: 0 0 8px #f87171;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .title {
+                font-size: 1.4rem;
+            }
+            .toggle-btn {
+                font-size: 0.7rem;
+                padding: 8px 18px;
+                letter-spacing: 0.04em;
+            }
+            .controls-row {
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Webcam feed (mirrored, low opacity background) -->
+    <video id="webcam-background" playsinline autoplay muted></video>
+
+    <!-- HUD overlay for pinch charging gauge -->
+    <canvas id="hud-canvas"></canvas>
+
+    <!-- Three.js will inject its canvas here; we target via JS -->
+    <div id="webgl-canvas"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <h1 class="title">Resonant Sphere</h1>
+        <div class="controls-row">
+            <div class="status-dot" id="status-dot" title="Hand tracking status"></div>
+            <button class="toggle-btn" id="toggle-camera-btn" title="Toggle webcam background visibility">
+                Show Camera
+            </button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ─────────────────────────────────────
+            // DOM REFERENCES
+            // ─────────────────────────────────────
+            const webglContainer = document.getElementById('webgl-canvas');
+            const videoElement = document.getElementById('webcam-background');
+            const hudCanvas = document.getElementById('hud-canvas');
+            const hudCtx = hudCanvas.getContext('2d');
+            const toggleBtn = document.getElementById('toggle-camera-btn');
+            const statusDot = document.getElementById('status-dot');
+
+            // ─────────────────────────────────────
+            // GLOBAL STATE
+            // ─────────────────────────────────────
+            let cameraVisible = false;
+            let mediaPipeReady = false;
+            let latestHandResults = null; // Stores the most recent MediaPipe results
+            let handPresenceCounter = 0; // Smooths hand presence detection
+
+            // Single-hand state
+            let chargeValue = 0.0;
+            let isPinching = false;
+            let targetSpherePos = new THREE.Vector3(0, 0, 0);
+            let targetSphereRot = new THREE.Vector2(0, 0); // pitch, yaw deltas
+            let currentSphereRotPitch = 0;
+            let currentSphereRotYaw = 0;
+
+            // Explosion state
+            let explosionActive = false;
+            let explosionStartTime = 0;
+            let explosionCharge = 0;
+            const EXPLOSION_DURATION = 2.0; // seconds to reform
+            const EXPLOSION_MAX_RADIUS = 4.5;
+
+            // Two-hand state
+            let twoHandMode = false;
+            let targetSphereScale = 1.0;
+            let currentSphereScale = 1.0;
+            const SCALE_MIN = 0.3;
+            const SCALE_MAX = 3.5;
+            const BASELINE_HAND_DIST = 0.25; // normalized distance for scale=1.0
+
+            // Color modulation (0–5 fingers extended)
+            const FINGER_COLOR_PALETTE = [
+                '#ffffff', // 0 fingers - white
+                '#ff6b6b', // 1 finger  - coral red
+                '#ffd93d', // 2 fingers - golden yellow
+                '#6bcb77', // 3 fingers - fresh green
+                '#4d96ff', // 4 fingers - vibrant blue
+                '#c084fc', // 5 fingers - soft violet
+            ];
+            let activeFingerCount = 0;
+            let targetColor = new THREE.Color(FINGER_COLOR_PALETTE[0]);
+            const colorLerpSpeed = 0.08;
+
+            // ─────────────────────────────────────
+            // THREE.JS SETUP
+            // ─────────────────────────────────────
+            const scene = new THREE.Scene();
+
+            // Camera
+            const camera = new THREE.PerspectiveCamera(
+                55, // FOV
+                window.innerWidth / window.innerHeight,
+                0.1,
+                50
+            );
+            camera.position.set(0, 0, 5.5);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap for performance
+            renderer.setClearColor(0x0a0a0a, 1);
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            webglContainer.appendChild(renderer.domElement);
+            renderer.domElement.id = 'threejs-canvas';
+            renderer.domElement.style.display = 'block';
+            renderer.domElement.style.position = 'fixed';
+            renderer.domElement.style.inset = '0';
+            renderer.domElement.style.zIndex = '1';
+
+            // ─────────────────────────────────────
+            // PARTICLE TEXTURE (soft radial glow)
+            // ─────────────────────────────────────
+            function createGlowTexture() {
+                const size = 64;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                const half = size / 2;
+                const gradient = ctx.createRadialGradient(half, half, 0, half, half, half);
+                gradient.addColorStop(0, 'rgba(255,255,255,1)');
+                gradient.addColorStop(0.08, 'rgba(255,255,255,0.95)');
+                gradient.addColorStop(0.25, 'rgba(255,255,255,0.65)');
+                gradient.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+                gradient.addColorStop(0.75, 'rgba(255,255,255,0.03)');
+                gradient.addColorStop(1, 'rgba(255,255,255,0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, size, size);
+                return new THREE.CanvasTexture(canvas);
+            }
+            const glowTexture = createGlowTexture();
+
+            // ─────────────────────────────────────
+            // FIBONACCI SPHERE — 3000 particles
+            // ─────────────────────────────────────
+            const PARTICLE_COUNT = 3000;
+            const SPHERE_RADIUS = 2.0;
+
+            // Arrays to store original data per particle
+            const homePositions = new Float32Array(PARTICLE_COUNT * 3);
+            const normals = new Float32Array(PARTICLE_COUNT * 3); // normalized direction vectors
+            const currentOffsets = new Float32Array(PARTICLE_COUNT * 3); // displacement from home
+            const explosionVelocities = new Float32Array(PARTICLE_COUNT * 3); // for explosion
+
+            // Fibonacci lattice (golden spiral) for uniform distribution
+            const phi = Math.PI * (3.0 - Math.sqrt(5.0)); // golden angle
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                const y = 1.0 - (i / (PARTICLE_COUNT - 1)) * 2.0; // from 1 to -1
+                const radiusAtY = Math.sqrt(1.0 - y * y);
+                const theta = phi * i;
+
+                const x = Math.cos(theta) * radiusAtY;
+                const z = Math.sin(theta) * radiusAtY;
+
+                const idx = i * 3;
+                // Home position on unit sphere (will be scaled by SPHERE_RADIUS in geometry)
+                homePositions[idx] = x * SPHERE_RADIUS;
+                homePositions[idx + 1] = y * SPHERE_RADIUS;
+                homePositions[idx + 2] = z * SPHERE_RADIUS;
+
+                // Normalized direction
+                const len = Math.sqrt(x * x + y * y + z * z);
+                normals[idx] = x / len;
+                normals[idx + 1] = y / len;
+                normals[idx + 2] = z / len;
+
+                // Offsets start at zero
+                currentOffsets[idx] = 0;
+                currentOffsets[idx + 1] = 0;
+                currentOffsets[idx + 2] = 0;
+
+                explosionVelocities[idx] = 0;
+                explosionVelocities[idx + 1] = 0;
+                explosionVelocities[idx + 2] = 0;
+            }
+
+            // Build BufferGeometry
+            const particleGeometry = new THREE.BufferGeometry();
+            // Initial positions (will be updated per frame)
+            const positionAttribute = new THREE.BufferAttribute(
+                new Float32Array(homePositions),
+                3
+            );
+            positionAttribute.setUsage(THREE.DynamicDrawUsage);
+            particleGeometry.setAttribute('position', positionAttribute);
+
+            // PointsMaterial with additive blending
+            const pointsMaterial = new THREE.PointsMaterial({
+                size: 0.055,
+                map: glowTexture,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                depthTest: true,
+                transparent: true,
+                opacity: 0.85,
+                color: new THREE.Color(FINGER_COLOR_PALETTE[0]),
+            });
+
+            // Points mesh
+            const particleSystem = new THREE.Points(particleGeometry, pointsMaterial);
+            particleSystem.position.set(0, 0, 0);
+            particleSystem.scale.set(1, 1, 1);
+            scene.add(particleSystem);
+
+            // ─────────────────────────────────────
+            // AMBIENT STARFIELD (subtle background)
+            // ─────────────────────────────────────
+            const starCount = 400;
+            const starGeom = new THREE.BufferGeometry();
+            const starPositionsArr = new Float32Array(starCount * 3);
+            for (let i = 0; i < starCount; i++) {
+                starPositionsArr[i * 3] = (Math.random() - 0.5) * 16;
+                starPositionsArr[i * 3 + 1] = (Math.random() - 0.5) * 10;
+                starPositionsArr[i * 3 + 2] = -2 - Math.random() * 8;
+            }
+            starGeom.setAttribute('position', new THREE.BufferAttribute(starPositionsArr, 3));
+            const starMat = new THREE.PointsMaterial({
+                size: 0.015,
+                color: 0xffffff,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.5,
+            });
+            const stars = new THREE.Points(starGeom, starMat);
+            scene.add(stars);
+
+            // ─────────────────────────────────────
+            // MEDIAPIPE HANDS SETUP
+            // ─────────────────────────────────────
+            const hands = new Hands({
+                locateFile: (file) =>
+                    `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`,
+            });
+
+            hands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.5,
+            });
+
+            // Process results whenever MediaPipe finishes a frame
+            hands.onResults((results) => {
+                latestHandResults = results;
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    handPresenceCounter = Math.min(handPresenceCounter + 1, 30);
+                    statusDot.classList.remove('inactive');
+                } else {
+                    handPresenceCounter = Math.max(handPresenceCounter - 1, 0);
+                    if (handPresenceCounter <= 0) {
+                        statusDot.classList.add('inactive');
+                        latestHandResults = null;
+                    }
+                }
+            });
+
+            // ─────────────────────────────────────
+            // CAMERA / WEBCAM SETUP
+            // ─────────────────────────────────────
+            let cameraUtilsInstance = null;
+
+            async function startCamera() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 640 },
+                            height: { ideal: 480 },
+                            facingMode: 'user',
+                        },
+                        audio: false,
+                    });
+                    videoElement.srcObject = stream;
+                    await videoElement.play();
+
+                    // Initialize MediaPipe Camera utility
+                    const Camera = window.Camera;
+                    cameraUtilsInstance = new Camera(videoElement, {
+                        onFrame: async () => {
+                            if (mediaPipeReady && videoElement.readyState >= 2) {
+                                await hands.send({ image: videoElement });
+                            }
+                        },
+                        width: 640,
+                        height: 480,
+                    });
+                    await cameraUtilsInstance.start();
+                    mediaPipeReady = true;
+                    statusDot.classList.remove('inactive');
+                    console.log('✅ MediaPipe Hands + Camera initialized successfully.');
+                } catch (err) {
+                    console.warn('⚠️ Camera access denied or error:', err.message);
+                    statusDot.classList.add('inactive');
+                    // Sphere will still render without interaction
+                }
+            }
+
+            // ─────────────────────────────────────
+            // HELPER: Count extended fingers
+            // ─────────────────────────────────────
+            function countExtendedFingers(landmarks) {
+                if (!landmarks || landmarks.length < 21) return 0;
+                let count = 0;
+
+                // Thumb: compare tip(4) distance from wrist(0) vs ip(3) distance from wrist
+                const wrist = { x: landmarks[0].x, y: landmarks[0].y, z: landmarks[0].z };
+                const thumbTip = { x: landmarks[4].x, y: landmarks[4].y, z: landmarks[4].z };
+                const thumbIp = { x: landmarks[3].x, y: landmarks[3].y, z: landmarks[3].z };
+                const distTipWrist = Math.hypot(thumbTip.x - wrist.x, thumbTip.y - wrist.y, thumbTip.z - wrist
+                    .z);
+                const distIpWrist = Math.hypot(thumbIp.x - wrist.x, thumbIp.y - wrist.y, thumbIp.z - wrist.z);
+                if (distTipWrist > distIpWrist * 1.15) count++;
+
+                // Index: tip(8).y < pip(6).y
+                if (landmarks[8].y < landmarks[6].y) count++;
+                // Middle: tip(12).y < pip(10).y
+                if (landmarks[12].y < landmarks[10].y) count++;
+                // Ring: tip(16).y < pip(14).y
+                if (landmarks[16].y < landmarks[14].y) count++;
+                // Pinky: tip(20).y < pip(18).y
+                if (landmarks[20].y < landmarks[18].y) count++;
+
+                return Math.min(count, 5);
+            }
+
+            // ─────────────────────────────────────
+            // HELPER: Euclidean distance (3D)
+            // ─────────────────────────────────────
+            function landmarkDistance(lm1, lm2) {
+                const dx = lm1.x - lm2.x;
+                const dy = lm1.y - lm2.y;
+                const dz = (lm1.z || 0) - (lm2.z || 0);
+                return Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
+
+            // ─────────────────────────────────────
+            // PROCESS HAND RESULTS → STATE UPDATE
+            // ─────────────────────────────────────
+            function processHandResults(results) {
+                if (!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    // No hands: reset toward defaults
+                    twoHandMode = false;
+                    targetSpherePos.lerp(new THREE.Vector3(0, 0, 0), 0.08);
+                    targetSphereRot.set(0, 0);
+                    targetSphereScale = 1.0;
+                    if (!explosionActive) {
+                        chargeValue = Math.max(chargeValue - 0.03, 0);
+                    }
+                    isPinching = false;
+                    return;
+                }
+
+                const handCount = results.multiHandLandmarks.length;
+                const landmarks0 = results.multiHandLandmarks[0];
+
+                // Finger count from first hand for color
+                activeFingerCount = countExtendedFingers(landmarks0);
+                targetColor.set(FINGER_COLOR_PALETTE[activeFingerCount]);
+
+                if (handCount === 2) {
+                    // ── TWO-HAND MODE: Adaptive Scaling ──
+                    twoHandMode = true;
+                    const landmarks1 = results.multiHandLandmarks[1];
+
+                    // Center of each hand = wrist (landmark 0)
+                    const wrist0 = landmarks0[0];
+                    const wrist1 = landmarks1[0];
+                    const dist = landmarkDistance(wrist0, wrist1);
+
+                    // Map distance to scale: baseline ~0.25 → scale 1.0
+                    const rawScale = dist / BASELINE_HAND_DIST;
+                    targetSphereScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, rawScale));
+
+                    // Reset single-hand states
+                    chargeValue = Math.max(chargeValue - 0.04, 0);
+                    isPinching = false;
+                    targetSpherePos.lerp(new THREE.Vector3(0, 0, 0), 0.08);
+
+                } else if (handCount === 1) {
+                    // ── SINGLE-HAND MODE ──
+                    twoHandMode = false;
+                    targetSphereScale = 1.0;
+
+                    // --- Translation: Middle Finger MCP (landmark 9) ---
+                    const mcp9 = landmarks0[9];
+                    // Map normalized [0,1] to 3D space range [-3, 3] for x, [-2.5, 2.5] for y
+                    const transX = (mcp9.x - 0.5) * 6.0;
+                    const transY = -(mcp9.y - 0.5) * 5.0;
+                    targetSpherePos.set(transX, transY, 0);
+
+                    // --- Rotation: delta wrist(0) → middle finger MCP(9) ---
+                    const wrist0 = landmarks0[0];
+                    const deltaX = mcp9.x - wrist0.x;
+                    const deltaY = mcp9.y - wrist0.y;
+                    // Map delta to pseudo pitch/yaw (in radians)
+                    const targetPitch = deltaY * Math.PI * 1.2; // up/down tilt
+                    const targetYaw = deltaX * Math.PI * 1.2; // left/right turn
+                    targetSphereRot.set(targetPitch, targetYaw);
+
+                    // --- Pinch Detection: Thumb Tip(4) ↔ Index Tip(8) ---
+                    const thumbTip = landmarks0[4];
+                    const indexTip = landmarks0[8];
+                    const pinchDist = landmarkDistance(thumbTip, indexTip);
+                    const PINCH_THRESHOLD = 0.045;
+
+                    if (pinchDist < PINCH_THRESHOLD && !explosionActive) {
+                        // Pinching: accumulate charge
+                        isPinching = true;
+                        chargeValue = Math.min(chargeValue + 0.025, 1.0);
+                    } else if (isPinching && !explosionActive) {
+                        // Released pinch
+                        if (chargeValue > 0.2) {
+                            // Trigger explosion
+                            explosionActive = true;
+                            explosionStartTime = performance.now() / 1000;
+                            explosionCharge = chargeValue;
+                            // Set initial velocities outward
+                            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                                const idx = i * 3;
+                                const strength = explosionCharge * EXPLOSION_MAX_RADIUS;
+                                explosionVelocities[idx] = normals[idx] * strength;
+                                explosionVelocities[idx + 1] = normals[idx + 1] * strength;
+                                explosionVelocities[idx + 2] = normals[idx + 2] * strength;
+                                // Set current offset to match
+                                currentOffsets[idx] = explosionVelocities[idx];
+                                currentOffsets[idx + 1] = explosionVelocities[idx + 1];
+                                currentOffsets[idx + 2] = explosionVelocities[idx + 2];
+                            }
+                        }
+                        isPinching = false;
+                        chargeValue = 0;
+                    } else if (!isPinching && !explosionActive) {
+                        // Not pinching, decay charge
+                        chargeValue = Math.max(chargeValue - 0.02, 0);
+                    }
+                }
+            }
+
+            // ─────────────────────────────────────
+            // UPDATE PARTICLE GEOMETRY
+            // ─────────────────────────────────────
+            function updateParticleGeometry(now) {
+                const positions = particleGeometry.attributes.position.array;
+                const dt = Math.min(0.1, 1 / 60); // clamped delta
+
+                if (explosionActive) {
+                    const elapsed = now - explosionStartTime;
+                    const progress = Math.min(elapsed / EXPLOSION_DURATION, 1.0);
+
+                    // Ease-out cubic for smooth reformation
+                    const ease = 1.0 - Math.pow(1.0 - progress, 3);
+
+                    for (let i = 0; i < PARTICLE_COUNT; i++) {
+                        const idx = i * 3;
+                        // Decay velocities
+                        explosionVelocities[idx] *= 0.94;
+                        explosionVelocities[idx + 1] *= 0.94;
+                        explosionVelocities[idx + 2] *= 0.94;
+
+                        // Lerp offset toward zero (home)
+                        currentOffsets[idx] = explosionVelocities[idx] * (1.0 - ease);
+                        currentOffsets[idx + 1] = explosionVelocities[idx + 1] * (1.0 - ease);
+                        currentOffsets[idx + 2] = explosionVelocities[idx + 2] * (1.0 - ease);
+
+                        // Final position = home + offset
+                        positions[idx] = homePositions[idx] + currentOffsets[idx];
+                        positions[idx + 1] = homePositions[idx + 1] + currentOffsets[idx + 1];
+                        positions[idx + 2] = homePositions[idx + 2] + currentOffsets[idx + 2];
+                    }
+
+                    if (progress >= 1.0) {
+                        // Snap to home
+                        explosionActive = false;
+                        for (let i = 0; i < PARTICLE_COUNT; i++) {
+                            const idx = i * 3;
+                            positions[idx] = homePositions[idx];
+                            positions[idx + 1] = homePositions[idx + 1];
+                            positions[idx + 2] = homePositions[idx + 2];
+                            currentOffsets[idx] = 0;
+                            currentOffsets[idx + 1] = 0;
+                            currentOffsets[idx + 2] = 0;
+                            explosionVelocities[idx] = 0;
+                            explosionVelocities[idx + 1] = 0;
+                            explosionVelocities[idx + 2] = 0;
+                        }
+                        chargeValue = 0;
+                    }
+                } else if (isPinching && chargeValue > 0) {
+                    // Constriction + jitter during charging
+                    const constrictAmount = chargeValue * 0.2; // 0–20% constriction
+                    const jitterAmp = chargeValue * 0.04;
+                    // Use deterministic pseudo-random for jitter based on index + time
+                    const timeSeed = now * 23.7;
+                    for (let i = 0; i < PARTICLE_COUNT; i++) {
+                        const idx = i * 3;
+                        const hx = homePositions[idx];
+                        const hy = homePositions[idx + 1];
+                        const hz = homePositions[idx + 2];
+
+                        // Constrict toward center
+                        const cx = hx * (1.0 - constrictAmount);
+                        const cy = hy * (1.0 - constrictAmount);
+                        const cz = hz * (1.0 - constrictAmount);
+
+                        // High-frequency jitter
+                        const jx = Math.sin(timeSeed + i * 0.73) * jitterAmp;
+                        const jy = Math.cos(timeSeed + i * 0.91) * jitterAmp;
+                        const jz = Math.sin(timeSeed + i * 1.17) * jitterAmp;
+
+                        positions[idx] = cx + jx;
+                        positions[idx + 1] = cy + jy;
+                        positions[idx + 2] = cz + jz;
+
+                        currentOffsets[idx] = positions[idx] - hx;
+                        currentOffsets[idx + 1] = positions[idx + 1] - hy;
+                        currentOffsets[idx + 2] = positions[idx + 2] - hz;
+                    }
+                } else if (!explosionActive && chargeValue < 0.001) {
+                    // Idle: gentle breathing + ensure particles are at home
+                    const breatheAmp = 0.015;
+                    const breatheFreq = 0.7;
+                    const breathe = Math.sin(now * breatheFreq) * breatheAmp;
+                    for (let i = 0; i < PARTICLE_COUNT; i++) {
+                        const idx = i * 3;
+                        const nx = normals[idx];
+                        const ny = normals[idx + 1];
+                        const nz = normals[idx + 2];
+                        // Subtle radial breathing
+                        positions[idx] = homePositions[idx] + nx * breathe;
+                        positions[idx + 1] = homePositions[idx + 1] + ny * breathe;
+                        positions[idx + 2] = homePositions[idx + 2] + nz * breathe;
+                        currentOffsets[idx] = nx * breathe;
+                        currentOffsets[idx + 1] = ny * breathe;
+                        currentOffsets[idx + 2] = nz * breathe;
+                    }
+                } else if (!explosionActive && chargeValue > 0) {
+                    // Decaying charge, smooth return
+                    const fadeAmount = chargeValue * 0.15;
+                    for (let i = 0; i < PARTICLE_COUNT; i++) {
+                        const idx = i * 3;
+                        currentOffsets[idx] *= 0.92;
+                        currentOffsets[idx + 1] *= 0.92;
+                        currentOffsets[idx + 2] *= 0.92;
+                        positions[idx] = homePositions[idx] + currentOffsets[idx];
+                        positions[idx + 1] = homePositions[idx + 1] + currentOffsets[idx + 1];
+                        positions[idx + 2] = homePositions[idx + 2] + currentOffsets[idx + 2];
+                    }
+                }
+
+                particleGeometry.attributes.position.needsUpdate = true;
+            }
+
+            // ─────────────────────────────────────
+            // UPDATE HUD CANVAS (Charging Gauge)
+            // ─────────────────────────────────────
+            function updateHUD(results) {
+                hudCtx.clearRect(0, 0, hudCanvas.width, hudCanvas.height);
+
+                if (!isPinching || chargeValue <= 0.001) return;
+                if (!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
+
+                const landmarks = results.multiHandLandmarks[0];
+                // Use midpoint between thumb tip(4) and index tip(8) for gauge position
+                const thumbTip = landmarks[4];
+                const indexTip = landmarks[8];
+                const midX = (thumbTip.x + indexTip.x) / 2;
+                const midY = (thumbTip.y + indexTip.y) / 2;
+
+                // Mirror X for display
+                const screenX = (1.0 - midX) * hudCanvas.width;
+                const screenY = midY * hudCanvas.height;
+
+                const gaugeRadius = 36;
+                const lineWidth = 3.5;
+
+                // Outer subtle ring
+                hudCtx.beginPath();
+                hudCtx.arc(screenX, screenY, gaugeRadius + 8, 0, Math.PI * 2);
+                hudCtx.strokeStyle = 'rgba(255,255,255,0.15)';
+                hudCtx.lineWidth = 1;
+                hudCtx.stroke();
+
+                // Background ring
+                hudCtx.beginPath();
+                hudCtx.arc(screenX, screenY, gaugeRadius, 0, Math.PI * 2);
+                hudCtx.strokeStyle = 'rgba(255,255,255,0.25)';
+                hudCtx.lineWidth = lineWidth;
+                hudCtx.stroke();
+
+                // Charge progress arc
+                const startAngle = -Math.PI / 2;
+                const endAngle = startAngle + Math.PI * 2 * chargeValue;
+                hudCtx.beginPath();
+                hudCtx.arc(screenX, screenY, gaugeRadius, startAngle, endAngle);
+                hudCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+                hudCtx.lineWidth = lineWidth;
+                hudCtx.lineCap = 'round';
+                hudCtx.shadowColor = 'rgba(255,255,255,0.7)';
+                hudCtx.shadowBlur = 14;
+                hudCtx.stroke();
+                hudCtx.shadowBlur = 0;
+
+                // Center dot
+                hudCtx.beginPath();
+                hudCtx.arc(screenX, screenY, 4, 0, Math.PI * 2);
+                hudCtx.fillStyle = 'rgba(255,255,255,0.8)';
+                hudCtx.fill();
+
+                // Percentage text
+                const pct = Math.round(chargeValue * 100);
+                hudCtx.font = '600 11px "Playfair Display", Georgia, serif';
+                hudCtx.fillStyle = 'rgba(255,255,255,0.85)';
+                hudCtx.textAlign = 'center';
+                hudCtx.fillText(`${pct}%`, screenX, screenY + gaugeRadius + 22);
+            }
+
+            // ─────────────────────────────────────
+            // ANIMATION LOOP
+            // ─────────────────────────────────────
+            const clock = new THREE.Clock();
+            let lastProcessTime = 0;
+
+            function animate(timestamp) {
+                requestAnimationFrame(animate);
+
+                const now = timestamp / 1000; // seconds
+                const dt = Math.min(clock.getDelta(), 0.1);
+
+                // Process latest hand results (throttled slightly for stability)
+                if (latestHandResults && now - lastProcessTime > 0.016) {
+                    processHandResults(latestHandResults);
+                    updateHUD(latestHandResults);
+                    lastProcessTime = now;
+                } else if (!latestHandResults && now - lastProcessTime > 0.05) {
+                    // No hands: decay toward defaults
+                    processHandResults(null);
+                    updateHUD(null);
+                    lastProcessTime = now;
+                }
+
+                // Smooth interpolation of sphere transform
+                // Position (lerp factor 0.1 for liquid responsiveness)
+                particleSystem.position.lerp(targetSpherePos, 0.1);
+
+                // Rotation (smooth toward target pitch/yaw)
+                currentSphereRotPitch += (targetSphereRot.x - currentSphereRotPitch) * 0.12;
+                currentSphereRotYaw += (targetSphereRot.y - currentSphereRotYaw) * 0.12;
+                particleSystem.rotation.x = currentSphereRotPitch;
+                particleSystem.rotation.y = currentSphereRotYaw;
+                particleSystem.rotation.z = 0;
+
+                // Scale (two-hand or default)
+                currentSphereScale += (targetSphereScale - currentSphereScale) * 0.1;
+                particleSystem.scale.setScalar(currentSphereScale);
+
+                // Color lerp
+                pointsMaterial.color.lerp(targetColor, colorLerpSpeed);
+
+                // Update particle geometry (explosion, constriction, breathing)
+                updateParticleGeometry(now);
+
+                // Subtle star rotation
+                stars.rotation.y += dt * 0.03;
+                stars.rotation.x += dt * 0.015;
+
+                // Render
+                renderer.render(scene, camera);
+            }
+
+            // ─────────────────────────────────────
+            // RESIZE HANDLER
+            // ─────────────────────────────────────
+            function onResize() {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+
+                camera.aspect = w / Math.max(h, 1);
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+                // Resize HUD canvas
+                hudCanvas.width = w;
+                hudCanvas.height = h;
+                // Reset HUD context properties after resize
+                hudCtx.lineCap = 'round';
+            }
+            window.addEventListener('resize', onResize);
+            // Also handle orientation change on mobile
+            window.addEventListener('orientationchange', () => {
+                setTimeout(onResize, 150);
+            });
+
+            // ─────────────────────────────────────
+            // CAMERA TOGGLE BUTTON
+            // ─────────────────────────────────────
+            toggleBtn.addEventListener('click', () => {
+                cameraVisible = !cameraVisible;
+                if (cameraVisible) {
+                    videoElement.classList.add('visible');
+                    toggleBtn.textContent = 'Hide Camera';
+                    toggleBtn.classList.add('active');
+                } else {
+                    videoElement.classList.remove('visible');
+                    toggleBtn.textContent = 'Show Camera';
+                    toggleBtn.classList.remove('active');
+                }
+            });
+
+            // ─────────────────────────────────────
+            // INITIALIZATION
+            // ─────────────────────────────────────
+            function init() {
+                // Set initial HUD canvas size
+                hudCanvas.width = window.innerWidth;
+                hudCanvas.height = window.innerHeight;
+                hudCtx.lineCap = 'round';
+
+                // Start camera and MediaPipe
+                startCamera();
+
+                // Begin animation loop
+                requestAnimationFrame(animate);
+
+                console.log('🚀 Resonant Sphere initialized.');
+                console.log('   - 3,000 Fibonacci-lattice particles');
+                console.log('   - MediaPipe Hands tracking active');
+                console.log('   - Pinch to charge & release to explode');
+                console.log('   - Two-hand scaling enabled');
+                console.log('   - Finger count modulates color');
+            }
+
+            // ─────────────────────────────────────
+            // CLEANUP ON PAGE UNLOAD
+            // ─────────────────────────────────────
+            window.addEventListener('beforeunload', () => {
+                if (cameraUtilsInstance && cameraUtilsInstance.stop) {
+                    cameraUtilsInstance.stop();
+                }
+                if (videoElement.srcObject) {
+                    const tracks = videoElement.srcObject.getTracks();
+                    tracks.forEach(track => track.stop());
+                }
+                renderer.dispose();
+                particleGeometry.dispose();
+                pointsMaterial.dispose();
+                glowTexture.dispose();
+                starGeom.dispose();
+                starMat.dispose();
+            });
+
+            // ─────────────────────────────────────
+            // START
+            // ─────────────────────────────────────
+            init();
+        })();
+    </script>
+    <span > &copy; 2026 Resonant Sphere Coded by Sagor Mondol </span>
+</body>
+</html>

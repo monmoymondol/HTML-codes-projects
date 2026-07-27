@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>🌀 HOLOGRAM DESKTOP | JARVIS-Style Interface</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000010;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', 'Courier New', monospace;
+      overflow: hidden;
+      background: radial-gradient(ellipse at center, #001030 0%, #000010 70%);
+    }
+
+    #main-container {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    #workspace {
+      position: relative;
+      width: 900px;
+      height: 650px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 120px rgba(0, 150, 255, 0.25),
+        0 0 200px rgba(0, 200, 255, 0.15),
+        inset 0 0 80px rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(0, 200, 255, 0.3);
+      backdrop-filter: blur(10px);
+      background: transparent;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+
+    video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* HUD Overlay */
+    #hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .hud-panel {
+      background: rgba(0, 10, 30, 0.8);
+      backdrop-filter: blur(20px);
+      padding: 10px 18px;
+      border-radius: 12px;
+      color: #00ccff;
+      font-size: 12px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      border: 1px solid rgba(0, 200, 255, 0.4);
+      box-shadow: 0 0 25px rgba(0, 150, 255, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 12px #00ff88;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #gesture-label {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 200, 255, 0.15);
+      backdrop-filter: blur(15px);
+      padding: 10px 25px;
+      border-radius: 25px;
+      color: #00ccff;
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      z-index: 20;
+      pointer-events: none;
+      border: 1px solid rgba(0, 200, 255, 0.5);
+      text-shadow: 0 0 20px #00ccff;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: 300px;
+      background: rgba(5, 15, 35, 0.9);
+      backdrop-filter: blur(30px);
+      border: 2px solid rgba(0, 180, 255, 0.35);
+      border-radius: 20px;
+      padding: 22px;
+      color: #cceeff;
+      box-shadow:
+        0 0 80px rgba(0, 100, 255, 0.2),
+        inset 0 0 30px rgba(0, 0, 0, 0.3);
+      max-height: 650px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    #sidebar h2 {
+      font-size: 22px;
+      background: linear-gradient(135deg, #00ccff, #0066ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 18px;
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    .app-icon-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+
+    .app-icon {
+      width: 55px;
+      height: 55px;
+      background: rgba(0, 150, 255, 0.1);
+      border: 2px solid rgba(0, 200, 255, 0.3);
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .app-icon:hover {
+      background: rgba(0, 200, 255, 0.2);
+      border-color: #00ccff;
+      box-shadow: 0 0 30px rgba(0, 150, 255, 0.4);
+      transform: scale(1.1);
+    }
+
+    .gesture-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .gesture-list li {
+      padding: 8px 12px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border-left: 3px solid #00ccff;
+      font-size: 11px;
+      color: #aaccff;
+    }
+
+    .gesture-list li strong {
+      color: #00ccff;
+    }
+
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 11px;
+    }
+
+    .stat-label { color: #7799cc; }
+    .stat-value { color: #00ccff; font-weight: bold; }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #00ccff, #0066ff);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="main-container">
+  <div id="workspace">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+
+    <div id="hud">
+      <div class="hud-panel">
+        <div class="hud-dot"></div>
+        <span>🌀 JARVIS OS v2.0</span>
+      </div>
+      <div class="hud-panel">
+        <span>⚡ <span id="fps-display">60</span> FPS</span>
+        <span>👆 <span id="hands-display">0</span></span>
+        <span>📱 <span id="app-display">IDLE</span></span>
+      </div>
+      <div class="hud-panel">
+        <span>🕐 <span id="time-display">00:00</span></span>
+      </div>
+    </div>
+
+    <div id="gesture-label">🌀 READY</div>
+  </div>
+
+  <div id="sidebar">
+    <h2>🌀 HOLOGRAM DESKTOP</h2>
+
+    <div style="text-align:center; margin-bottom:15px; color:#7799cc; font-size:11px;">
+      Gesture-Controlled Interface
+    </div>
+
+    <div class="app-icon-row">
+      <div class="app-icon" title="Browser">🌐</div>
+      <div class="app-icon" title="Files">📁</div>
+      <div class="app-icon" title="Music">🎵</div>
+      <div class="app-icon" title="Settings">⚙️</div>
+      <div class="app-icon" title="Terminal">💻</div>
+      <div class="app-icon" title="Gallery">🖼️</div>
+    </div>
+
+    <div style="margin-bottom:15px;">
+      <h4 style="color:#00ccff; margin-bottom:8px;">🤖 GESTURE CONTROLS</h4>
+      <ul class="gesture-list">
+        <li><strong>✋ Open Palm</strong> → Browse Mode</li>
+        <li><strong>👆 Point</strong> → Select / Click</li>
+        <li><strong>✌️ Peace</strong> → Open App Menu</li>
+        <li><strong>🤏 Pinch</strong> → Resize Window</li>
+        <li><strong>✊ Fist</strong> → Close App</li>
+        <li><strong>🖐️ Five Fingers</strong> → Draw Mode</li>
+        <li><strong>👍 Thumbs Up</strong> → Rotate 3D Object</li>
+        <li><strong>👎 Thumbs Down</strong> → Minimize All</li>
+      </ul>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-row">
+        <span class="stat-label">🎯 Gesture</span>
+        <span class="stat-value" id="sidebar-gesture">READY</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">📱 Active App</span>
+        <span class="stat-value" id="sidebar-app">None</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">🖼️ Windows</span>
+        <span class="stat-value" id="sidebar-windows">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">✏️ Drawing</span>
+        <span class="stat-value" id="sidebar-drawing">OFF</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">🔄 Rotation</span>
+        <span class="stat-value" id="sidebar-rotation">0°</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+<script>
+  (function() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = 900;
+    canvas.height = 650;
+
+    // ----- HOLOGRAPHIC WINDOWS -----
+    class HolographicWindow {
+      constructor(x, y, w, h, title, icon) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.title = title;
+        this.icon = icon;
+        this.scale = 1;
+        this.rotation = 0;
+        this.opacity = 0.9;
+        this.targetScale = 1;
+        this.targetRotation = 0;
+      }
+
+      update() {
+        this.scale += (this.targetScale - this.scale) * 0.15;
+        this.rotation += (this.targetRotation - this.rotation) * 0.1;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x + this.w/2, this.y + this.h/2);
+        ctx.rotate(this.rotation);
+        ctx.scale(this.scale, this.scale);
+
+        // Window body
+        let gradient = ctx.createLinearGradient(-this.w/2, -this.h/2, this.w/2, this.h/2);
+        gradient.addColorStop(0, 'rgba(0, 30, 60, 0.85)');
+        gradient.addColorStop(1, 'rgba(0, 15, 40, 0.9)');
+        ctx.fillStyle = gradient;
+        ctx.strokeStyle = 'rgba(0, 200, 255, 0.6)';
+        ctx.lineWidth = 2;
+        
+        // Rounded rect
+        this.roundRect(ctx, -this.w/2, -this.h/2, this.w, this.h, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Title bar
+        ctx.fillStyle = 'rgba(0, 150, 255, 0.3)';
+        this.roundRect(ctx, -this.w/2, -this.h/2, this.w, 35, 12);
+        ctx.fill();
+
+        // Title text
+        ctx.fillStyle = '#00ccff';
+        ctx.font = 'bold 14px "Segoe UI"';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${this.icon} ${this.title}`, -this.w/2 + 15, -this.h/2 + 24);
+
+        // Content area
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fillRect(-this.w/2 + 10, -this.h/2 + 45, this.w - 20, this.h - 55);
+
+        // Glow border
+        ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+        ctx.lineWidth = 8;
+        this.roundRect(ctx, -this.w/2, -this.h/2, this.w, this.h, 12);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+    }
+
+    // ----- WINDOWS -----
+    let windows = [
+      new HolographicWindow(80, 100, 280, 200, 'Browser', '🌐'),
+      new HolographicWindow(400, 80, 260, 220, 'Files', '📁'),
+      new HolographicWindow(250, 350, 300, 180, 'Music', '🎵'),
+    ];
+
+    let selectedWindow = null;
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let isPinching = false;
+    let pinchStartDist = 0;
+    let pinchWindow = null;
+    let pinchStartScale = 1;
+
+    // ----- DRAWING -----
+    let drawingLines = [];
+    let currentLine = [];
+    let isDrawing = false;
+
+    // ----- 3D OBJECT -----
+    let cubeRotation = { x: 0, y: 0, z: 0 };
+    let isRotating = false;
+    let lastRotationHand = null;
+
+    // ----- PARTICLES -----
+    let particles = [];
+    const MAX_PARTICLES = 200;
+
+    class Particle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2 - 1;
+        this.life = 1;
+        this.size = Math.random() * 3 + 1;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.015;
+      }
+      draw(ctx) {
+        if (this.life <= 0) return;
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = '#00ccff';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+
+    function spawnParticles(x, y, count = 5) {
+      for (let i=0; i<count; i++) {
+        if (particles.length < MAX_PARTICLES) {
+          particles.push(new Particle(x, y));
+        }
+      }
+    }
+
+    // ----- GESTURE RECOGNITION -----
+    function recognizeGesture(landmarks) {
+      if (!landmarks || landmarks.length === 0) return 'NONE';
+      const pts = landmarks.map(l => ({x: l.x, y: l.y}));
+
+      const thumbTip = pts[4], thumbIp = pts[3];
+      const indexTip = pts[8], indexPip = pts[6];
+      const middleTip = pts[12], middlePip = pts[10];
+      const ringTip = pts[16], ringPip = pts[14];
+      const pinkyTip = pts[20], pinkyPip = pts[18];
+
+      const isExtended = (tip, pip) => tip.y < pip.y - 0.04;
+      const thumbExtended = thumbTip.x < thumbIp.x - 0.04;
+      const indexExtended = isExtended(indexTip, indexPip);
+      const middleExtended = isExtended(middleTip, middlePip);
+      const ringExtended = isExtended(ringTip, ringPip);
+      const pinkyExtended = isExtended(pinkyTip, pinkyPip);
+
+      const allExtended = indexExtended && middleExtended && ringExtended && pinkyExtended && thumbExtended;
+      const noneExtended = !indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended;
+      const peaceExtended = indexExtended && middleExtended && !ringExtended && !pinkyExtended && !thumbExtended;
+      const pointExtended = indexExtended && !middleExtended && !ringExtended && !pinkyExtended && !thumbExtended;
+      const thumbOnly = thumbExtended && !indexExtended && !middleExtended && !ringExtended && !pinkyExtended;
+
+      if (allExtended) return 'OPEN';
+      if (noneExtended) return 'FIST';
+      if (peaceExtended) return 'PEACE';
+      if (pointExtended) return 'POINT';
+      if (thumbOnly) return 'THUMBS_UP';
+      if (thumbTip.y > pts[0].y + 0.12 && !indexExtended && !middleExtended) return 'THUMBS_DOWN';
+      
+      return 'CUSTOM';
+    }
+
+    function isPinchGesture(landmarks) {
+      if (!landmarks) return false;
+      const pts = landmarks.map(l => ({x: (1-l.x)*canvas.width, y: l.y*canvas.height}));
+      const thumb = pts[4];
+      const index = pts[8];
+      const dist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+      return dist < 40;
+    }
+
+    // ----- DRAW 3D CUBE -----
+    function draw3DCube(cx, cy, size, rotX, rotY, rotZ) {
+      const vertices = [
+        [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+        [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+      ];
+
+      const edges = [
+        [0,1], [1,2], [2,3], [3,0],
+        [4,5], [5,6], [6,7], [7,4],
+        [0,4], [1,5], [2,6], [3,7]
+      ];
+
+      const projected = vertices.map(v => {
+        let x = v[0], y = v[1], z = v[2];
+        
+        // Rotate Y
+        let cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        let x1 = x * cosY - z * sinY;
+        let z1 = x * sinY + z * cosY;
+        x = x1; z = z1;
+        
+        // Rotate X
+        let cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+        let y1 = y * cosX - z * sinX;
+        let z2 = y * sinX + z * cosX;
+        y = y1; z = z2;
+        
+        // Rotate Z
+        let cosZ = Math.cos(rotZ), sinZ = Math.sin(rotZ);
+        let x2 = x * cosZ - y * sinZ;
+        let y2 = x * sinZ + y * cosZ;
+        
+        const scale = 200 / (z + 4);
+        return {
+          x: cx + x2 * size * scale,
+          y: cy + y2 * size * scale,
+          z: z
+        };
+      });
+
+      edges.forEach(([a, b]) => {
+        ctx.beginPath();
+        ctx.moveTo(projected[a].x, projected[a].y);
+        ctx.lineTo(projected[b].x, projected[b].y);
+        ctx.strokeStyle = '#00ccff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.8;
+        ctx.stroke();
+        
+        // Glow
+        ctx.strokeStyle = 'rgba(0, 200, 255, 0.3)';
+        ctx.lineWidth = 6;
+        ctx.globalAlpha = 0.3;
+        ctx.stroke();
+      });
+
+      // Draw vertices
+      projected.forEach(v => {
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = '#00ffff';
+        ctx.globalAlpha = 1;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(v.x, v.y, 10, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+        ctx.fill();
+      });
+    }
+
+    // ----- MAIN LOOP -----
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+
+    let currentGesture = 'READY';
+    let activeApp = 'None';
+    let lastFrameTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+
+    hands.onResults((results) => {
+      const now = performance.now();
+      frameCount++;
+      if (now - lastFrameTime >= 1000) {
+        fps = Math.round(frameCount / ((now - lastFrameTime)/1000));
+        frameCount = 0;
+        lastFrameTime = now;
+        document.getElementById('fps-display').textContent = fps;
+      }
+
+      // Clear & background
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      let bgGradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 0, canvas.width/2, canvas.height/2, canvas.width*0.8);
+      bgGradient.addColorStop(0, '#001030');
+      bgGradient.addColorStop(1, '#000010');
+      ctx.fillStyle = bgGradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw grid
+      ctx.strokeStyle = 'rgba(0, 150, 255, 0.06)';
+      ctx.lineWidth = 1;
+      for (let i=0; i<canvas.width; i+=40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, canvas.height);
+        ctx.stroke();
+      }
+      for (let i=0; i<canvas.height; i+=40) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(canvas.width, i);
+        ctx.stroke();
+      }
+
+      // Draw video (subtle)
+      ctx.save();
+      ctx.scale(-1, 1);
+      ctx.translate(-canvas.width, 0);
+      ctx.globalAlpha = 0.2;
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      // Update windows
+      windows.forEach(w => w.update());
+
+      // Draw 3D cube in center
+      draw3DCube(canvas.width/2 + 180, canvas.height/2, 0.8, cubeRotation.x, cubeRotation.y, cubeRotation.z);
+
+      // Draw windows
+      windows.forEach(w => w.draw(ctx));
+
+      // Draw drawing lines
+      drawingLines.forEach(line => {
+        if (line.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(line[0].x, line[0].y);
+        for (let i=1; i<line.length; i++) {
+          ctx.lineTo(line[i].x, line[i].y);
+        }
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.9;
+        ctx.stroke();
+        
+        // Glow
+        ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+        ctx.lineWidth = 8;
+        ctx.globalAlpha = 0.4;
+        ctx.stroke();
+      });
+
+      // Draw current line
+      if (currentLine.length > 1) {
+        ctx.beginPath();
+        ctx.moveTo(currentLine[0].x, currentLine[0].y);
+        for (let i=1; i<currentLine.length; i++) {
+          ctx.lineTo(currentLine[i].x, currentLine[i].y);
+        }
+        ctx.strokeStyle = '#00ffff';
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.9;
+        ctx.stroke();
+      }
+
+      // Process hands
+      if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        currentGesture = 'READY';
+        isDrawing = false;
+        if (currentLine.length > 0) {
+          drawingLines.push([...currentLine]);
+          currentLine = [];
+        }
+        updateUI();
+        updateParticles();
+        return;
+      }
+
+      const handsData = results.multiHandLandmarks.map(hand => {
+        const pts = hand.map(l => ({x: (1-l.x)*canvas.width, y: l.y*canvas.height}));
+        const gesture = recognizeGesture(hand);
+        const isPinch = isPinchGesture(hand);
+        return {
+          pts,
+          gesture,
+          isPinch,
+          indexFinger: pts[8],
+          thumb: pts[4],
+          center: pts[9],
+          wrist: pts[0]
+        };
+      });
+
+      // Primary hand
+      const primaryHand = handsData[0];
+      currentGesture = primaryHand.gesture;
+      
+      // Draw hand cursor
+      ctx.beginPath();
+      ctx.arc(primaryHand.indexFinger.x, primaryHand.indexFinger.y, 15, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(0, 200, 255, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = '#00ccff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.arc(primaryHand.indexFinger.x, primaryHand.indexFinger.y, 5, 0, Math.PI*2);
+      ctx.fillStyle = '#00ffff';
+      ctx.fill();
+
+      spawnParticles(primaryHand.indexFinger.x, primaryHand.indexFinger.y, 2);
+
+      // Gesture actions
+      const fingerPos = primaryHand.indexFinger;
+
+      // POINT - Select window
+      if (currentGesture === 'POINT') {
+        let found = false;
+        windows.forEach(w => {
+          if (fingerPos.x > w.x && fingerPos.x < w.x + w.w &&
+              fingerPos.y > w.y && fingerPos.y < w.y + w.h) {
+            selectedWindow = w;
+            found = true;
+            activeApp = w.title;
+          }
+        });
+        if (!found) selectedWindow = null;
+        
+        // Move selected window
+        if (selectedWindow && isDragging) {
+          selectedWindow.x = fingerPos.x - dragOffsetX;
+          selectedWindow.y = fingerPos.y - dragOffsetY;
+        }
+      }
+
+      // FIST - Close window
+      if (currentGesture === 'FIST' && selectedWindow) {
+        windows = windows.filter(w => w !== selectedWindow);
+        selectedWindow = null;
+        activeApp = 'None';
+      }
+
+      // PEACE - Open new window
+      if (currentGesture === 'PEACE') {
+        if (windows.length < 5) {
+          windows.push(new HolographicWindow(
+            fingerPos.x - 120, fingerPos.y - 80,
+            240, 180,
+            ['Terminal', 'Gallery', 'Settings', 'Calculator', 'Notes'][windows.length],
+            ['💻', '🖼️', '⚙️', '🧮', '📝'][windows.length]
+          ));
+        }
+      }
+
+      // OPEN - Drawing mode
+      if (currentGesture === 'OPEN') {
+        isDrawing = true;
+        currentLine.push({x: fingerPos.x, y: fingerPos.y});
+        activeApp = 'Drawing';
+      } else {
+        if (isDrawing && currentLine.length > 0) {
+          drawingLines.push([...currentLine]);
+          currentLine = [];
+        }
+        isDrawing = false;
+      }
+
+      // THUMBS_UP - Rotate 3D cube
+      if (currentGesture === 'THUMBS_UP') {
+        isRotating = true;
+        cubeRotation.y += 0.05;
+        cubeRotation.x += 0.03;
+        activeApp = '3D Viewer';
+      }
+
+      // THUMBS_DOWN - Minimize all
+      if (currentGesture === 'THUMBS_DOWN') {
+        windows = [];
+        selectedWindow = null;
+        activeApp = 'None';
+      }
+
+      // Pinch to resize
+      if (primaryHand.isPinch && selectedWindow) {
+        if (!isPinching) {
+          isPinching = true;
+          pinchWindow = selectedWindow;
+          pinchStartScale = selectedWindow.scale;
+          pinchStartDist = Math.hypot(
+            primaryHand.thumb.x - primaryHand.indexFinger.x,
+            primaryHand.thumb.y - primaryHand.indexFinger.y
+          );
+        } else {
+          const currentDist = Math.hypot(
+            primaryHand.thumb.x - primaryHand.indexFinger.x,
+            primaryHand.thumb.y - primaryHand.indexFinger.y
+          );
+          const scaleFactor = currentDist / pinchStartDist;
+          selectedWindow.targetScale = Math.max(0.5, Math.min(2, pinchStartScale * scaleFactor));
+        }
+      } else {
+        isPinching = false;
+      }
+
+      // Two hands - rotate cube
+      if (handsData.length === 2) {
+        const hand2 = handsData[1];
+        cubeRotation.y += (hand2.indexFinger.x - primaryHand.indexFinger.x) * 0.005;
+        cubeRotation.x += (hand2.indexFinger.y - primaryHand.indexFinger.y) * 0.005;
+      }
+
+      updateParticles();
+      updateUI();
+    });
+
+    function updateParticles() {
+      for (let i=particles.length-1; i>=0; i--) {
+        particles[i].update();
+        particles[i].draw(ctx);
+        if (particles[i].life <= 0) particles.splice(i,1);
+      }
+    }
+
+    function updateUI() {
+      document.getElementById('hands-display').textContent = 
+        document.querySelectorAll('#workspace canvas') ? '1' : '0';
+      document.getElementById('app-display').textContent = activeApp.toUpperCase();
+      document.getElementById('gesture-label').textContent = `🌀 ${currentGesture}`;
+      
+      const now = new Date();
+      document.getElementById('time-display').textContent = 
+        now.toLocaleTimeString('en-US', {hour12: false});
+
+      // Sidebar
+      document.getElementById('sidebar-gesture').textContent = currentGesture;
+      document.getElementById('sidebar-app').textContent = activeApp;
+      document.getElementById('sidebar-windows').textContent = windows.length;
+      document.getElementById('sidebar-drawing').textContent = isDrawing ? 'ON' : 'OFF';
+      document.getElementById('sidebar-rotation').textContent = 
+        Math.round((cubeRotation.y * 180 / Math.PI) % 360) + '°';
+    }
+
+    // Dragging
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      windows.forEach(w => {
+        if (x > w.x && x < w.x + w.w && y > w.y && y < w.y + w.h) {
+          selectedWindow = w;
+          isDragging = true;
+          dragOffsetX = x - w.x;
+          dragOffsetY = y - w.y;
+        }
+      });
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging && selectedWindow) {
+        const rect = canvas.getBoundingClientRect();
+        selectedWindow.x = e.clientX - rect.left - dragOffsetX;
+        selectedWindow.y = e.clientY - rect.top - dragOffsetY;
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDragging = false;
+    });
+
+    // Camera
+    const camera = new Camera(video, {
+      onFrame: async () => {
+        await hands.send({image: video});
+      },
+      width: 640,
+      height: 480
+    });
+
+    camera.start().then(() => {
+      console.log('✅ Hologram Desktop Active!');
+    }).catch(err => {
+      console.error('❌ Camera error:', err);
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'c') windows = [];
+      if (e.key === 'd') drawingLines = [];
+      if (e.key === 'r') cubeRotation = {x:0, y:0, z:0};
+    });
+  })();
+</script>
+<span style="position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:#7799cc; font-size:11px;">
+  &copy; 2026 Hologram Desktop | Gesture-Controlled Interface Coded With Sagor Mondol
+</body>
+</html>
