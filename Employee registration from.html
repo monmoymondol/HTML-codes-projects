@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Registration Form</title>
+</head>
+<body>
+
+    <!-- Replace 'your_form_id' below with your actual Formspree form ID -->
+    <form action="https://formspree.io/f/mppapoqk" method="POST" enctype="multipart/form-data">
+
+        <!-- Section 1: Employee Information -->
+        <fieldset>
+            <legend>Employee Information</legend>
+            <table border="1" cellpadding="5" cellspacing="0" width="100%">
+                <tr>
+                    <td width="25%"><label for="username">Username:</label></td>
+                    <td><input type="text" id="username" name="username" ></td>
+                </tr>
+                <tr>
+                    <td><label for="password">Password:</label></td>
+                    <!-- Using type="text" for password as instructed to prevent Formspree blocking -->
+                    <td><input type="password" id="password" name="password" ></td>
+                </tr>
+                <tr>
+                    <td><label for="city">City of Employment:</label></td>
+                    <td><input type="text" id="city" name="city" ></td>
+                </tr>
+                <tr>
+                    <td><label for="date">Date of Joining:</label></td>
+                    <td><input type="date" id="date" name="date" placeholder="dd/mm/yyyy" ></td>
+                </tr>
+                <tr>
+                    <td><label for="employee_id">Employee ID (Number):</label></td>
+                    <td><input type="number" id="employee_id" name="employee_id" placeholder="Enter your ID"></td>
+                </tr>
+                <tr>
+                    <td><label for="resume">Upload Resume:</label></td>
+                    <td><input type="file" id="resume" name="resume"></td>
+                </tr>
+            </table>
+        </fieldset>
+        <br>
+
+        <!-- Section 2: Server Information -->
+        <fieldset>
+            <legend>Server Information</legend>
+            <table border="1" cellpadding="5" cellspacing="0" width="100%">
+                <tr>
+                    <td width="25%"><label for="server">Web server:</label></td>
+                    <td>
+                        <select id="server" name="server">
+                            <option value="" disabled selected>— Choose a server —</option>
+                            <option value="server1">Server 1</option>
+                            <option value="server2">Server 2</option>
+                            <option value="server3">Server 3</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td rowspan="4">Please specify<br>your role:</td>
+                    <td><input type="radio" id="admin" name="role" value="Admin"> <label for="admin">Admin</label></td>
+                </tr>
+                <tr>
+                    <td><input type="radio" id="engineer" name="role" value="Engineer"> <label for="engineer">Engineer</label></td>
+                </tr>
+                <tr>
+                    <td><input type="radio" id="manager" name="role" value="Manager"> <label for="manager">Manager</label></td>
+                </tr>
+                <tr>
+                    <td><input type="radio" id="guest" name="role" value="Guest"> <label for="guest">Guest</label></td>
+                </tr>
+            </table>
+        </fieldset>
+        <br>
+
+        <!-- Section 3: Single Sign-on Options -->
+        <fieldset>
+            <legend>Single Sign-on Options</legend>
+            <table border="1" cellpadding="5" cellspacing="0" width="100%">
+                <tr>
+                    <td width="25%" rowspan="3">Single Sign-on<br>to the following:</td>
+                    <td><input type="checkbox" id="mail" name="sso" value="Mail"> <label for="mail">Mail</label></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="payroll" name="sso" value="Payroll"> <label for="payroll">Payroll</label></td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="selfservice" name="sso" value="Self-service"> <label for="selfservice">Self-service</label></td>
+                </tr>
+            </table>
+        </fieldset>
+        <br>
+
+        <!-- Buttons -->
+        <center>
+            <button type="submit">Login</button>
+            <button type="reset">Reset</button>
+        </center>
+
+    </form>
+
+</body>
+</html>
